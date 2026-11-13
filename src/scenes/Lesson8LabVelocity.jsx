@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 
@@ -33,7 +34,7 @@ export default function Lesson8LabVelocity() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[5, 5, 10]} controlsTarget={[4, 0.5, 0]}>
+      <SceneShell cameraPosition={[2, 2.4, 8.5]} controlsTarget={[4.2, 0.2, 0]}>
         <RulerTrack length={SCENE_LENGTH} start={0} highlight={[0, SCENE_LENGTH]} />
         <FrictionCart
           running={running}
@@ -107,13 +108,14 @@ function FrictionCart({ running, resetKey, onFinish, onTick }) {
   const ref = useRef();
   const t = useRef(0);
   const speed = useRef(2 + Math.random() * 0.6); // variação entre tentativas
+  const tick = useThrottled(onTick, 80);
 
   useFrame((_, delta) => {
     if (!running) return;
     t.current += delta;
     const x = Math.min(speed.current * t.current, SCENE_LENGTH);
     if (ref.current) ref.current.position.x = x;
-    onTick?.(t.current);
+    tick(t.current);
     if (x >= SCENE_LENGTH) {
       onFinish?.(t.current);
       speed.current = 2 + Math.random() * 0.6;

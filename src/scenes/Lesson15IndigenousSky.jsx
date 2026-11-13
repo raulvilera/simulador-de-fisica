@@ -88,7 +88,7 @@ export default function Lesson15IndigenousSky() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell space cameraPosition={[0, 5, 22]} controlsTarget={[0, 5, 0]} maxDistance={40}>
+      <SceneShell space skyBrightness={0.4} cameraPosition={[0, 5, 22]} controlsTarget={[0, 5, 0]} maxDistance={40}>
         <SkyWheel month={month}>
           {CONSTELLATIONS.map((c) => (
             <Figure key={c.name} c={c} visible={c.season === season} showNames={names} />

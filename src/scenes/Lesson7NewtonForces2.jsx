@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 
@@ -18,9 +19,9 @@ export default function Lesson7NewtonForces2() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[6, 5, 11]} controlsTarget={[3, 0.5, 0]}>
+      <SceneShell cameraPosition={[4, 3.4, 14]} controlsTarget={[8, 0.2, 0]}>
         <RulerTrack length={16} start={0} />
-        <RaceCar playing={playing} resetKey={resetKey} accel={accel} onUpdate={setLive} />
+        <RaceCar key={resetKey} playing={playing} resetKey={resetKey} accel={accel} onUpdate={setLive} />
       </SceneShell>
 
       <div className="panel" style={panelOverlayStyle}>
@@ -66,6 +67,7 @@ export default function Lesson7NewtonForces2() {
 function RaceCar({ playing, resetKey, accel, onUpdate }) {
   const ref = useRef();
   const state = useRef({ x: 0, v: 0, t: 0 });
+  const report = useThrottled(onUpdate);
 
   useFrame((_, delta) => {
     if (!playing) return;
@@ -78,7 +80,7 @@ function RaceCar({ playing, resetKey, accel, onUpdate }) {
       s.v = 0;
     }
     if (ref.current) ref.current.position.x = s.x;
-    onUpdate?.({ v: s.v, x: s.x, t: s.t });
+    report({ v: s.v, x: s.x, t: s.t });
   });
 
   return (

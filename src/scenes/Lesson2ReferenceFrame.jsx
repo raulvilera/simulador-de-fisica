@@ -32,13 +32,13 @@ function Road({ playing, frame }) {
   return (
     <>
       <RulerTrack length={32} start={-16} z={0} />
-      <group ref={joaoRef} position={[0, 0.3, -0.3]}>
+      <group ref={joaoRef} position={[0, 0.3, -0.62]}>
         <Vehicle color="#3b82f6" />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#93c5fd">
           João
         </Label3D>
       </group>
-      <group ref={outroRef} position={[-4, 0.3, 0.3]}>
+      <group ref={outroRef} position={[-4, 0.3, 0.62]}>
         <Vehicle color="#f87171" />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#fca5a5">
           outro carro
@@ -57,7 +57,7 @@ export default function Lesson2ReferenceFrame() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[0, 7, 11]} controlsTarget={[0, 0.5, 0]}>
+      <SceneShell fov={54} cameraPosition={[-1.5, 3.4, 12.5]} controlsTarget={[0, 0, 0]}>
         <Road playing={playing} frame={frame} />
       </SceneShell>
 

@@ -97,7 +97,7 @@ export default function Lesson16Planetarium() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell space fov={78} cameraPosition={[0, 1.42, -0.3]} controlsTarget={[0, 1.6, 0]} minDistance={0.1} maxDistance={0.6}>
+      <SceneShell space skyBrightness={0.4} fov={78} cameraPosition={[0, 1.42, -0.3]} controlsTarget={[0, 1.6, 0]} minDistance={0.1} maxDistance={0.6}>
         <points>
           <bufferGeometry>
             <primitive object={backdropPositions} attach="attributes-position" />

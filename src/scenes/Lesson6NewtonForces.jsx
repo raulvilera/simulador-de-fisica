@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
-import { Arrow3D } from "./primitives.jsx";
+import { Arrow3D, Crate } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 
 export default function Lesson6NewtonForces() {
@@ -17,12 +17,8 @@ export default function Lesson6NewtonForces() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[6, 5, 11]} controlsTarget={[0, 0.6, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.011, 0]}>
-          <planeGeometry args={[30, 3]} />
-          <meshStandardMaterial color="#1f2a4d" />
-        </mesh>
-        <PushedBox playing={playing} resetKey={resetKey} accel={accel} />
+      <SceneShell fov={50} cameraPosition={[0.5, 2.8, 12.5]} controlsTarget={[1.5, 0.6, 0]}>
+        <PushedBox key={resetKey} playing={playing} accel={accel} />
         <Arrow3D from={[-2.2, 0.8, 0.4]} length={Math.max(f1 / 12, 0.3)} color="#3b82f6" label={`F1 = ${f1} N`} />
         <Arrow3D
           from={opposite ? [2.2, 0.8, -0.4] : [-2.2, 0.8, -0.4]}
@@ -75,7 +71,7 @@ export default function Lesson6NewtonForces() {
   );
 }
 
-function PushedBox({ playing, resetKey, accel }) {
+function PushedBox({ playing, accel }) {
   const ref = useRef();
   const state = useRef({ x: -4, v: 0 });
 
@@ -92,10 +88,9 @@ function PushedBox({ playing, resetKey, accel }) {
   });
 
   return (
-    <mesh key={resetKey} ref={ref} position={[-4, 0.4, 0]} castShadow>
-      <boxGeometry args={[0.8, 0.8, 0.8]} />
-      <meshStandardMaterial color="#8b5cf6" metalness={0.4} roughness={0.3} />
-    </mesh>
+    <group ref={ref} position={[-4, 0, 0]}>
+      <Crate size={0.9} />
+    </group>
   );
 }
 

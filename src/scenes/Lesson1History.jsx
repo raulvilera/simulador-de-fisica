@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Ball, Label3D } from "./primitives.jsx";
-import { Slider, Readout } from "../components/ui.jsx";
+import { Readout } from "../components/ui.jsx";
 
 const TOWER_HEIGHT = 9;
 const G = 9.8;
@@ -53,12 +54,57 @@ function FallingBalls({ dropping, aristotleMode, onLanded }) {
   );
 }
 
+// Torre no estilo da Torre de Pisa: base, seis galerias com colunatas, campanário
+// e a famosa inclinação (as esferas caem do lado "pendurado").
+const LEVELS = 6;
+const COLS = 22;
 function Tower() {
+  const columns = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const mesh = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.045, 0.05, 0.92, 8),
+      new THREE.MeshStandardMaterial({ color: "#f1ece0", roughness: 0.55 }),
+      LEVELS * COLS
+    );
+    let i = 0;
+    for (let l = 0; l < LEVELS; l++) {
+      for (let c = 0; c < COLS; c++) {
+        const ang = (c / COLS) * Math.PI * 2 + (l % 2) * (Math.PI / COLS);
+        dummy.position.set(Math.cos(ang) * 1.17, 1.5 + l + 0.5, Math.sin(ang) * 1.17);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i++, dummy.matrix);
+      }
+    }
+    mesh.castShadow = true;
+    return mesh;
+  }, []);
+  const marble = <meshStandardMaterial color="#e7e1d3" roughness={0.62} metalness={0.02} />;
   return (
-    <mesh position={[0, TOWER_HEIGHT / 2, -1.2]} castShadow receiveShadow>
-      <cylinderGeometry args={[1.1, 1.3, TOWER_HEIGHT, 16]} />
-      <meshPhysicalMaterial color="#aa9f82" roughness={0.88} metalness={0.02} clearcoat={0.08} />
-    </mesh>
+    <group position={[0, 0, -1.9]} rotation={[0.07, 0, 0]}>
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <cylinderGeometry args={[1.26, 1.32, 1.5, 40]} />
+        {marble}
+      </mesh>
+      <mesh position={[0, 1.5 + LEVELS / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.98, 0.98, LEVELS, 40]} />
+        <meshStandardMaterial color="#cfc8b8" roughness={0.75} />
+      </mesh>
+      {Array.from({ length: LEVELS + 1 }, (_, l) => (
+        <mesh key={l} position={[0, 1.5 + l, 0]} castShadow>
+          <cylinderGeometry args={[1.3, 1.3, 0.09, 40]} />
+          {marble}
+        </mesh>
+      ))}
+      <primitive object={columns} />
+      <mesh position={[0, 1.5 + LEVELS + 0.62, 0]} castShadow>
+        <cylinderGeometry args={[0.86, 0.9, 1.24, 32]} />
+        {marble}
+      </mesh>
+      <mesh position={[0, 1.5 + LEVELS + 1.28, 0]} castShadow>
+        <cylinderGeometry args={[0.95, 0.95, 0.08, 32]} />
+        {marble}
+      </mesh>
+    </group>
   );
 }
 
@@ -80,9 +126,9 @@ export default function Lesson1History() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[14, 7, 16]} controlsTarget={[0, 4.5, 0]}>
-        <Tower key={resetKey} />
-        <FallingBalls dropping={dropping} aristotleMode={aristotleMode} onLanded={setLandTime} />
+      <SceneShell cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
+        <Tower />
+        <FallingBalls key={resetKey} dropping={dropping} aristotleMode={aristotleMode} onLanded={setLandTime} />
       </SceneShell>
 
       <div className="panel" style={panelOverlayStyle}>

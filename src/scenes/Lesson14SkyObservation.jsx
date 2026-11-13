@@ -46,7 +46,7 @@ export default function Lesson14SkyObservation() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell space cameraPosition={VIEWS.earth} controlsTarget={[0, 0, 0]} minDistance={1} maxDistance={45}>
+      <SceneShell space skyBrightness={0.4} cameraPosition={VIEWS.earth} controlsTarget={[0, 0, 0]} minDistance={1} maxDistance={45}>
         <CameraRig position={VIEWS[view]} trigger={view} />
         <group position={EARTH}>
           <Earth radius={0.3} />

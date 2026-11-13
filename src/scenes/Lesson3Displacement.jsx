@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
-import { Readout, Slider } from "../components/ui.jsx";
+import { Readout } from "../components/ui.jsx";
 
 // Replica o exemplo do material: A (0 m) -> C (10 m) -> volta e para em B (6 m).
 const PATH = [0, 10, 6];
@@ -13,6 +14,7 @@ function Walker({ playing, resetKey, onUpdate }) {
   const legIndex = useRef(0);
   const pos = useRef(PATH[0]);
   const distance = useRef(0);
+  const report = useThrottled(onUpdate);
 
   useFrame((_, delta) => {
     if (!playing || legIndex.current >= PATH.length - 1) return;
@@ -31,12 +33,15 @@ function Walker({ playing, resetKey, onUpdate }) {
     }
 
     if (ref.current) ref.current.position.x = pos.current;
-    onUpdate?.({
-      position: pos.current,
-      distance: distance.current,
-      displacement: pos.current - PATH[0],
-      finished: legIndex.current >= PATH.length - 1,
-    });
+    report(
+      {
+        position: pos.current,
+        distance: distance.current,
+        displacement: pos.current - PATH[0],
+        finished: legIndex.current >= PATH.length - 1,
+      },
+      pos.current === target
+    );
     void prev;
   });
 
@@ -60,9 +65,9 @@ export default function Lesson3Displacement() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[5, 6, 11]} controlsTarget={[5, 0.5, 0]}>
+      <SceneShell cameraPosition={[3.5, 3.2, 12.5]} controlsTarget={[7, 0.2, 0]}>
         <RulerTrack length={14} start={0} highlight={PATH} />
-        <Walker playing={playing} resetKey={resetKey} onUpdate={setStats} />
+        <Walker key={resetKey} playing={playing} resetKey={resetKey} onUpdate={setStats} />
       </SceneShell>
 
       <div className="panel" style={panelOverlayStyle}>

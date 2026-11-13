@@ -19,9 +19,10 @@ export default function Lesson5VelocityMulti() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[5, 6, 11]} controlsTarget={[5, 0.5, 0]}>
+      <SceneShell cameraPosition={[3.5, 3.2, 12.5]} controlsTarget={[7, 0.2, 0]}>
         <RulerTrack length={14} start={0} highlight={[0, (14 * d1) / (d1 + d2), 14]} />
         <AnimatedCar
+          key={resetKey}
           playing={playing}
           resetKey={resetKey}
           t1={t1}

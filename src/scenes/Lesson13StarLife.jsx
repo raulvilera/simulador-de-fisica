@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
-import { Panel, Note, Tag } from "./space.jsx";
+import { Panel, Note, Tag, Glow } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 
 // Cor de uma estrela na fase principal conforme a massa (mais massa → mais
@@ -120,6 +120,7 @@ function Star({ p, mass }) {
           />
         </mesh>
       )}
+      {radius > 0 && !hole && !shell && <Glow scale={radius * 5} color={color} />}
       {radius > 0 && !hole && <pointLight intensity={2} decay={0} color={color} />}
       {hole && (
         <mesh rotation={[Math.PI / 2 - 0.3, 0, 0]}>

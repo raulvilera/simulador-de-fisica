@@ -35,8 +35,8 @@ src/
     LessonPage.jsx       → roteador: escolhe a cena 3D certa pelo slug da URL
     ui.jsx               → Slider, Readout, Formulas (controles reutilizáveis)
   scenes/
-    SceneShell.jsx       → "casca" 3D comum (luz, piso, sombras, pós-processamento)
-    primitives.jsx        → Vehicle, Ball, Arrow3D, RulerTrack, Label3D (peças reutilizáveis)
+    SceneShell.jsx       → "casca" 3D comum (cenário fotográfico, luz, sombras, ajuste de resolução)
+    primitives.jsx        → Vehicle, Ball, Crate, Arrow3D, RulerTrack, Label3D (peças reutilizáveis)
     space.jsx             → peças das cenas de astronomia (Sun, Earth, Planet, OrbitRing, Panel…)
     Lesson1History.jsx … Lesson20SpaceExploration.jsx → uma cena por aula
 ```
@@ -104,16 +104,29 @@ os dispositivos conectados.
    `src/components/LessonPage.jsx`.
 4. Pronto — a aula já aparece automaticamente no Hub.
 
-## Atualização visual (qualidade gráfica)
+## Qualidade gráfica e desempenho
 
-Todas as cenas 3D agora usam:
-- Céu procedural e iluminação de ambiente (sem depender de internet — tudo gerado por código, funciona offline).
-- Piso com textura de "asfalto" gerada por código (grão + manchas de pneu).
-- Sombras de contato suaves sob os objetos.
-- Pós-processamento: SSAO (oclusão de ambiente), bloom e anti-serrilhado (SMAA).
-- Materiais com verniz automotivo (clearcoat) nos carrinhos e nas esferas, para um acabamento mais realista.
+As cenas usam fotos, modelos e texturas reais em vez de formas geométricas simples:
 
-Isso deixa o visual bem mais próximo de um jogo 3D, mantendo tudo rodando localmente, sem internet.
+- **Aulas 1 a 9**: o cenário é a reta de um autódromo real fotografada em 360°,
+  projetada no chão e no horizonte; a mesma foto ilumina os objetos. O carro é um
+  modelo 3D detalhado (a cor muda por aula e as rodas giram conforme o movimento).
+- **Aulas 10 a 20**: Sol, Terra (com nuvens e atmosfera), Lua e planetas usam mapas
+  reais de superfície; o fundo é uma foto da Via Láctea.
+- **Desempenho**: os efeitos de pós-processamento (SSAO, bloom, SMAA) foram
+  removidos porque derrubavam a animação para 3 a 5 quadros por segundo em placas
+  de vídeo integradas. A resolução se ajusta sozinha e os números do painel são
+  atualizados ~10 vezes por segundo, sem redesenhar a tela a cada quadro.
+
+Tudo fica em `public/assets`, então continua funcionando sem internet.
+
+### Créditos dos recursos
+
+| Recurso | Autor / origem | Licença |
+|---|---|---|
+| Panorama do autódromo (`env/track_*`) | "Zwartkops Straight (afternoon)", Poly Haven | CC0 |
+| Carro (`models/car.glb`) | "Ferrari 458 Italia", vicent091036, via exemplos do three.js | CC BY 4.0 |
+| Texturas do Sol, planetas, Lua e Via Láctea (`planets/`) | Solar System Scope (a partir de dados da NASA) | CC BY 4.0 |
 
 ## Fontes
 

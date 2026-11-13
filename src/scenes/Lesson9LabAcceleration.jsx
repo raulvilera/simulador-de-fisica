@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
@@ -31,7 +30,7 @@ export default function Lesson9LabAcceleration() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[5, 5, 10]} controlsTarget={[4, 0.5, 0]}>
+      <SceneShell cameraPosition={[2, 2.4, 8.5]} controlsTarget={[4.2, 0.2, 0]}>
         <RulerTrack length={SCENE_LENGTH} start={0} />
         <FrictionCart
           running={running}
