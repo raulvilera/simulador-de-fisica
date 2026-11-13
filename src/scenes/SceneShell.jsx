@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment, Lightformer, ContactShadows, Sky } from "@react-three/drei";
+import { OrbitControls, Environment, Lightformer, ContactShadows, Sky, Stars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette, SSAO, SMAA } from "@react-three/postprocessing";
 import { useAsphaltTextures } from "./textures.js";
 
@@ -34,21 +34,36 @@ export default function SceneShell({
   fog = "#0b1020",
   controlsTarget = [0, 0.5, 0],
   sunPosition = [60, 35, -40],
+  // space: cenário de astronomia (Aulas 10-20) — fundo escuro com estrelas, sem
+  // piso/céu diurno; a própria cena posiciona a luz do Sol/estrela.
+  space = false,
+  minDistance = 2,
+  fov = 42,
+  maxDistance = 30,
 }) {
+  // O painel lateral (340 px) cobre a direita da tela. Nas cenas de astronomia a
+  // tela 3D é deslocada meia largura do painel para a esquerda, para o centro
+  // da cena ficar no meio da área livre.
+  const frame = space
+    ? { position: "absolute", top: 0, bottom: 0, left: -170, right: 170 }
+    : { position: "absolute", inset: 0 };
+
   return (
+    <div style={frame}>
     <Canvas
       shadows="soft"
       dpr={[1, 2]}
-      camera={{ position: cameraPosition, fov: 42 }}
+      camera={{ position: cameraPosition, fov }}
       gl={{
         antialias: true,
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
       }}
     >
-      <fog attach="fog" args={[fog, 14, 46]} />
+      {space ? <color attach="background" args={["#02030a"]} /> : <fog attach="fog" args={[fog, 14, 46]} />}
 
-      <ambientLight intensity={0.3} />
+      <ambientLight intensity={space ? 0.22 : 0.3} />
+      {!space && (
       <directionalLight
         castShadow
         position={[8, 14, 6]}
@@ -61,12 +76,15 @@ export default function SceneShell({
         shadow-camera-bottom={-14}
         shadow-bias={-0.0003}
       />
-      <pointLight position={[-8, 5, -6]} intensity={0.5} color="#7dd3fc" />
-      <pointLight position={[6, 3, 8]} intensity={0.3} color="#f59e0b" />
+      )}
+      {!space && <pointLight position={[-8, 5, -6]} intensity={0.5} color="#7dd3fc" />}
+      {!space && <pointLight position={[6, 3, 8]} intensity={0.3} color="#f59e0b" />}
 
       <Suspense fallback={null}>
         {/* Céu procedural (shader do drei, sem textura externa) para dar horizonte
             e atmosfera, em vez de um fundo de cor chapada. */}
+        {space && <Stars radius={90} depth={40} count={5000} factor={4} saturation={0.2} fade speed={0.4} />}
+        {!space && (
         <Sky
           sunPosition={sunPosition}
           turbidity={6}
@@ -74,30 +92,34 @@ export default function SceneShell({
           mieCoefficient={0.01}
           mieDirectionalG={0.9}
         />
+        )}
 
         {/* Ambiente de iluminação gerado proceduralmente (sem depender de HDRs
             externos) para reflexos realistas em metais e vidro, offline. */}
+        {!space && (
         <Environment resolution={256}>
           <Lightformer intensity={2.2} color="#ffffff" position={[0, 6, -9]} scale={[10, 10, 1]} />
           <Lightformer intensity={1.3} color="#7dd3fc" position={[-6, 3, 4]} scale={[6, 6, 1]} />
           <Lightformer intensity={1.3} color="#f59e0b" position={[6, 2, 4]} scale={[6, 6, 1]} />
           <Lightformer intensity={0.7} color="#ffffff" position={[0, -4, 4]} scale={[14, 4, 1]} />
         </Environment>
+        )}
 
-        {ground && <Ground />}
-        {ground && (
+        {ground && !space && <Ground />}
+        {ground && !space && (
           <ContactShadows position={[0, 0.012, 0]} opacity={0.7} scale={32} blur={1.6} far={10} />
         )}
         {children}
       </Suspense>
 
       <OrbitControls
+        makeDefault
         target={controlsTarget}
         enableDamping
         dampingFactor={0.08}
-        minDistance={2}
-        maxDistance={30}
-        maxPolarAngle={Math.PI / 2 - 0.02}
+        minDistance={minDistance}
+        maxDistance={maxDistance}
+        maxPolarAngle={space ? Math.PI : Math.PI / 2 - 0.02}
       />
 
       <EffectComposer multisampling={0} enableNormalPass>
@@ -107,5 +129,6 @@ export default function SceneShell({
         <SMAA />
       </EffectComposer>
     </Canvas>
+    </div>
   );
 }

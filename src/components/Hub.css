@@ -125,3 +125,21 @@
   border-radius: 999px;
   text-transform: uppercase;
 }
+
+.hub__unit {
+  margin-bottom: 48px;
+}
+
+.hub__unitTitle {
+  margin: 0 0 18px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f1f3fb;
+}
+
+.hub__unitTitle span {
+  margin-left: 10px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #aab3cf;
+}

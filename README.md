@@ -1,7 +1,8 @@
-# Simulador 3D de Cinemática — Aulas 1 a 9
+# Simulador 3D de Física — Aulas 1 a 20
 
 Simulador 3D interativo (Three.js + React Three Fiber) para as aulas de
-Cinemática do 4º bimestre de Ciências (Ensino Fundamental Anos Finais),
+Cinemática (1 a 9) e Astronomia (10 a 20) do 4º bimestre de Ciências
+(Ensino Fundamental Anos Finais),
 pensado para ser usado **ao vivo em sala, com projetor**, e também permitir
 que os alunos mexam nos parâmetros pelo próprio dispositivo.
 
@@ -27,16 +28,17 @@ npm run preview
 
 ```
 src/
-  data/lessons.js       → conteúdo das 9 aulas (objetivos, tópicos, fórmulas)
+  data/lessons.js       → conteúdo das 20 aulas (objetivos, tópicos, fórmulas)
   store/useAppStore.js  → estado global (modo apresentação/interativo)
   components/
-    Hub.jsx             → tela inicial com o menu das 9 aulas
+    Hub.jsx             → tela inicial com o menu das 20 aulas (Cinemática e Astronomia)
     LessonPage.jsx       → roteador: escolhe a cena 3D certa pelo slug da URL
     ui.jsx               → Slider, Readout, Formulas (controles reutilizáveis)
   scenes/
     SceneShell.jsx       → "casca" 3D comum (luz, piso, sombras, pós-processamento)
     primitives.jsx        → Vehicle, Ball, Arrow3D, RulerTrack, Label3D (peças reutilizáveis)
-    Lesson1History.jsx … Lesson9LabAcceleration.jsx → uma cena por aula
+    space.jsx             → peças das cenas de astronomia (Sun, Earth, Planet, OrbitRing, Panel…)
+    Lesson1History.jsx … Lesson20SpaceExploration.jsx → uma cena por aula
 ```
 
 Cada aula é uma cena independente em `src/scenes/`. Para editar o
@@ -57,6 +59,26 @@ dependem umas das outras, só das peças reutilizáveis em `primitives.jsx`.
 | 8 | Desafio: medir velocidade (carrinho de fricção) | cronômetro virtual, tabela de até 5 medições |
 | 9 | Desafio: calcular aceleração | duas medições de velocidade → a = ΔV/Δt |
 
+
+## Aulas 10 a 20 (Astronomia)
+
+Usam o mesmo `SceneShell` das Aulas 1 a 9 com a opção `space` (fundo escuro
+com estrelas no lugar do piso e do céu diurno) e o mesmo painel lateral.
+
+| Aula | Tema | Interação |
+|---|---|---|
+| 10 | Modelos geocêntrico e heliocêntrico | alternar o centro do modelo e ver as "laçadas" de Marte |
+| 11 | Origem do Universo e do Sistema Solar | avançar/voltar o tempo: expansão e nebulosa → disco → Sol e planetas |
+| 12 | Planetas rochosos e gasosos | clicar em cada planeta para ver tipo, período, luas e distância |
+| 13 | Ciclo de vida das estrelas | slider de massa inicial define cor, tempo de vida e destino final |
+| 14 | Observação do céu | Órion vista da Terra, de lado e de cima (o desenho se desfaz) |
+| 15 | Constelações indígenas | mês do ano → tempo novo/velho guarani e constelações visíveis |
+| 16 | Planetário virtual | céu de São Paulo por mês e hora, linhas, zodíaco e eclíptica |
+| 17 | Força gravitacional | sliders de massas e distância; posição da Lua e as marés |
+| 18 | Movimentos da Terra e da Lua | rotação, translação, fases da Lua e eclipses |
+| 19 | Vida fora da Terra | distância à estrela e efeito estufa → temperatura e estado da água |
+| 20 | Exploração espacial | linha do tempo (Sputnik → rovers em Marte) e satélites de GPS |
+
 ## Modo apresentação x modo interativo
 
 O botão no canto superior direito do Hub alterna entre:
@@ -72,12 +94,12 @@ em um servidor (ex.: Vercel, Netlify) e usar algo como Firebase, Supabase
 ou um WebSocket simples para replicar o estado do `useAppStore` entre todos
 os dispositivos conectados.
 
-## Como estender para as Aulas 10 a 20 (Sistema Solar, estrelas, etc.)
+## Como acrescentar novas aulas
 
 1. Acrescente os dados da nova aula em `src/data/lessons.js`.
 2. Crie um novo arquivo em `src/scenes/LessonXNomeDaCena.jsx`, copiando a
    estrutura de alguma cena parecida como ponto de partida (ex.:
-   `Lesson1History.jsx` para algo relacionado a astronomia/gravitação).
+   `Lesson12Planets.jsx` para algo relacionado a astronomia).
 3. Registre o novo componente em `SCENE_BY_TYPE` dentro de
    `src/components/LessonPage.jsx`.
 4. Pronto — a aula já aparece automaticamente no Hub.
@@ -96,4 +118,4 @@ Isso deixa o visual bem mais próximo de um jogo 3D, mantendo tudo rodando local
 ## Fontes
 
 O conteúdo (objetivos, tópicos e fórmulas) foi extraído do material de
-aula fornecido (SEDUC-SP, 4º bimestre de Ciências, Aulas 1 a 9).
+aula fornecido (SEDUC-SP, 4º bimestre de Ciências, Aulas 1 a 20).

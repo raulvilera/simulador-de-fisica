@@ -1,4 +1,5 @@
-// Conteúdo extraído das Aulas 1-9 (4º bimestre, Cinemática) — Ciências, Ensino Fundamental Anos Finais
+// Conteúdo extraído das Aulas 1-20 (4º bimestre) — Ciências, Ensino Fundamental Anos Finais
+// Aulas 1-9: Cinemática · Aulas 10-20: Astronomia
 // Fonte: material SEDUC-SP fornecido pelo professor.
 
 export const lessons = [
@@ -156,7 +157,193 @@ export const lessons = [
     hasSimulation: true,
     isChallenge: true,
   },
+  {
+    id: 10,
+    slug: "geocentrico-heliocentrico",
+    title: "Modelos geocêntrico e heliocêntrico",
+    subtitle: "A construção do conhecimento científico ao longo do tempo",
+    objective:
+      "Explicar e comparar a transição entre os modelos geocêntrico e heliocêntrico, destacando a construção coletiva do conhecimento científico e a importância das evidências para o aceite de hipóteses pela comunidade científica.",
+    topics: [
+      "As bases do geocentrismo (Aristóteles): plano sublunar e supralunar",
+      "Hiparco (excêntrico) e Ptolomeu (epiciclos)",
+      "Copérnico e o heliocentrismo",
+      "Kepler: órbitas elípticas e o movimento retrógrado de Marte",
+      "Galileu: a luneta e as luas de Júpiter",
+      "Modelos científicos são aperfeiçoados com novas evidências",
+    ],
+    sceneType: "geo-helio",
+    hasSimulation: true,
+  },
+  {
+    id: 11,
+    slug: "origem-sistema-solar",
+    title: "Origem do Sistema Solar e seus astros",
+    subtitle: "Big Bang, nebulosa e disco de acreção",
+    objective:
+      "Listar e explicar as principais hipóteses de origem do Universo e do Sistema Solar, com destaque para as características dos corpos celestes que compõem o sistema.",
+    topics: [
+      "Mitos de origem e a explicação científica",
+      "Teoria do Big Bang e a expansão do Universo",
+      "Nebulosa, gravidade e disco de acreção",
+      "Formação do Sol e dos planetas",
+      "Sol, planetas, satélites naturais, asteroides e cometas",
+    ],
+    sceneType: "origin",
+    hasSimulation: true,
+  },
+  {
+    id: 12,
+    slug: "planetas-sistema-solar",
+    title: "Planetas do Sistema Solar",
+    subtitle: "Planetas rochosos e gasosos",
+    objective:
+      "Categorizar as características dos planetas rochosos e gasosos, desde sua constituição física, distância média do Sol, entre outras características.",
+    topics: [
+      "Rochosos (telúricos): Mercúrio, Vênus, Terra e Marte",
+      "Gasosos: Júpiter, Saturno, Urano e Netuno",
+      "Constituição interna: crosta, manto e núcleo",
+      "Período de translação, luas e distância ao Sol",
+      "O que é um planeta: os três critérios da IAU",
+    ],
+    sceneType: "planets",
+    hasSimulation: true,
+  },
+  {
+    id: 13,
+    slug: "ciclo-vida-estrelas",
+    title: "Ciclo de vida das estrelas",
+    subtitle: "Nebulosas, fusão nuclear, supernovas e buracos negros",
+    objective: "Explicar as principais etapas que caracterizam o ciclo de vida de uma estrela.",
+    topics: [
+      "Nascimento: nebulosas e protoestrelas",
+      "Fusão nuclear: hidrogênio formando hélio",
+      "Massa inicial, cor, temperatura e tempo de vida",
+      "Morte da estrela: a gravidade vence",
+      "Anã branca, estrela de nêutrons e buraco negro",
+    ],
+    sceneType: "star-life",
+    hasSimulation: true,
+  },
+  {
+    id: 14,
+    slug: "observacao-do-ceu",
+    title: "Observação do céu",
+    subtitle: "Constelações, telescópios e sondas espaciais",
+    objective:
+      "Justificar o conceito de constelações como convenções culturais dependentes do ponto de vista do observador, comparando diferentes formas de interpretação do céu em distintas culturas e o desenvolvimento histórico dos instrumentos de observação astronômica.",
+    topics: [
+      "Astronomia: a ciência que estuda os astros",
+      "Luneta de Galileu, telescópios Hubble e James Webb",
+      "Sondas Mariner 2, Voyager 1 e 2 e Kepler",
+      "Constelações e asterismos (Três Marias, Cruzeiro do Sul)",
+      "As estrelas da bandeira nacional",
+    ],
+    sceneType: "sky-observation",
+    hasSimulation: true,
+  },
+  {
+    id: 15,
+    slug: "constelacoes-indigenas",
+    title: "Constelações indígenas",
+    subtitle: "Etnoastronomia e o céu guarani",
+    objective: "Defender a relevância das constelações e da observação do céu para os povos originários.",
+    topics: [
+      "Cada povo interpreta o céu de acordo com sua cultura",
+      "As 88 constelações oficiais da UAI",
+      "Etnoastronomia e o gnômon",
+      "Calendários naturais: chuva, seca, plantio e colheita",
+      "Ema, Homem Velho, Anta e Veado; tempo novo e tempo velho",
+    ],
+    sceneType: "indigenous-sky",
+    hasSimulation: true,
+  },
+  {
+    id: 16,
+    slug: "planetario-virtual",
+    title: "Planetário virtual",
+    subtitle: "Explorando o céu em diferentes datas",
+    objective: "Comparar os conhecimentos relacionados à observação do céu.",
+    topics: [
+      "Planetários virtuais (Stellarium)",
+      "Pontos cardeais, planetas e estrelas",
+      "Linhas das constelações: Centauro e Cruzeiro do Sul",
+      "O céu muda ao longo do ano",
+      "Constelações do zodíaco e a eclíptica",
+    ],
+    sceneType: "planetarium",
+    hasSimulation: true,
+  },
+  {
+    id: 17,
+    slug: "forca-gravitacional",
+    title: "Força gravitacional",
+    subtitle: "Lei da Gravitação Universal e as marés",
+    objective:
+      "Comparar a massa dos corpos celestes, associando-as à atração gravitacional, à Lei da Gravitação Universal, ao comportamento dos planetas no Sistema Solar e à influência da Lua sobre as marés.",
+    topics: [
+      "Gravidade e força gravitacional",
+      "Lei da Gravitação Universal (Newton, 1687)",
+      "A força depende das massas e da distância",
+      "Queda dos corpos e órbitas dos astros",
+      "A Lua e as marés",
+    ],
+    formulas: ["F = m · g"],
+    sceneType: "gravitation",
+    hasSimulation: true,
+  },
+  {
+    id: 18,
+    slug: "movimentos-terra-lua",
+    title: "Movimentos da Terra e da Lua",
+    subtitle: "Rotação, translação, fases da Lua e eclipses",
+    objective: "Explicar os principais movimentos descritos pela Terra e pela Lua no sistema Terra-Sol-Lua.",
+    topics: [
+      "Rotação da Terra: dias e noites",
+      "Translação e eixo inclinado: estações do ano",
+      "Solstícios e equinócios",
+      "Rotação sincronizada e revolução da Lua",
+      "Fases da Lua, eclipse solar e eclipse lunar",
+    ],
+    sceneType: "earth-moon",
+    hasSimulation: true,
+  },
+  {
+    id: 19,
+    slug: "vida-fora-da-terra",
+    title: "Vida fora da Terra",
+    subtitle: "Condições para a vida e zona habitável",
+    objective: "Discutir a viabilidade de vida fora do planeta Terra.",
+    topics: [
+      "Condições para a vida: gravidade, atmosfera, proteção, água líquida e temperatura",
+      "Efeito estufa e camada de ozônio",
+      "Zona habitável",
+      "Astrobiologia e assinaturas biológicas",
+      "Marte, Europa, Encélado e exoplanetas (TRAPPIST-1)",
+    ],
+    sceneType: "habitable-zone",
+    hasSimulation: true,
+  },
+  {
+    id: 20,
+    slug: "exploracao-espacial",
+    title: "Exploração espacial",
+    subtitle: "Histórico, atualidade e tecnologias do dia a dia",
+    objective: "Traçar o histórico e a atualidade da exploração espacial.",
+    topics: [
+      "Sputnik 1, Gagarin, Tereshkova e Apollo 11",
+      "Estação Espacial Internacional (ISS)",
+      "Exploração de Marte: rovers Curiosity e Perseverance",
+      "O Brasil no espaço: SGDC, CBERS e Amazônia-1",
+      "GPS, satélites de comunicação e tecnologias derivadas",
+    ],
+    sceneType: "space-exploration",
+    hasSimulation: true,
+  },
 ];
 
 export const getLessonBySlug = (slug) => lessons.find((l) => l.slug === slug);
 export const getLessonById = (id) => lessons.find((l) => l.id === Number(id));
+
+// Unidade temática de cada aula (usada para agrupar o menu inicial).
+export const unitOf = (lesson) => (lesson.id <= 9 ? "Cinemática" : "Astronomia");
