@@ -1,0 +1,127 @@
+.hub {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 0%, #1b2340 0%, #0a0e1a 55%, #05070d 100%);
+  color: #f1f3fb;
+  padding: 48px 56px 80px;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.hub__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 44px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 28px;
+}
+
+.hub__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  color: #7dd3fc;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.hub__header h1 {
+  margin: 0;
+  font-size: 2.6rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ffffff, #9fc9ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hub__subtitle {
+  margin: 10px 0 0;
+  color: #aab3cf;
+  font-size: 1.05rem;
+}
+
+.hub__modeToggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.hub__modeToggle button {
+  border: none;
+  background: transparent;
+  color: #c7cde3;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.hub__modeToggle button.active {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
+}
+
+.hub__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+
+.lessonCard {
+  position: relative;
+  display: block;
+  padding: 26px 24px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lessonCard:hover {
+  transform: translateY(-4px);
+  border-color: #7dd3fc;
+  box-shadow: 0 16px 40px rgba(14, 165, 233, 0.18);
+}
+
+.lessonCard__num {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #7dd3fc;
+  margin-bottom: 10px;
+}
+
+.lessonCard h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.lessonCard p {
+  margin: 0;
+  color: #a6adc9;
+  font-size: 0.92rem;
+}
+
+.lessonCard__badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: #f59e0b;
+  color: #221400;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
