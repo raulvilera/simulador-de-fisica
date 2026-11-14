@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { create } from "zustand";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -16,6 +16,10 @@ import "./quantities.css";
 // o botão "mostrar etiquetas" da barra da caneta ficam sempre de acordo.
 export const useConcepts = create((set) => ({
   hidden: new Set(),
+  // false = etiquetas compactas (só símbolo e valor; a explicação abre ao
+  // tocar/passar o mouse); true = todas mostram a explicação
+  detail: false,
+  setDetail: (detail) => set({ detail }),
   hide: (id) => set((s) => ({ hidden: new Set(s.hidden).add(id) })),
   toggle: (id) =>
     set((s) => {
@@ -47,37 +51,55 @@ export function useQuantityVisibility(ids) {
 }
 
 // Etiqueta clicável presa a um ponto da cena.
-// Com `id`, a etiqueta some sozinha ao ser tocada (estado global).
+// Etiqueta da cena. Fica compacta (símbolo e valor, semitransparente) para não
+// esconder o que acontece na simulação; tocar nela (ou passar o mouse) mostra a
+// explicação, e o × a apaga. Com `id`, o estado de oculta é global.
 export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, value, onHide }) {
   const key = id ?? q?.id;
   const visible = useConcepts((s) => !key || !s.hidden.has(key));
+  const detail = useConcepts((s) => s.detail);
+  const [open, setOpen] = useState(false);
   if (!visible) return null;
   color = color ?? q?.color;
   symbol = symbol ?? q?.symbol;
   name = name ?? q?.name;
   const hideIt = onHide ?? (key ? () => useConcepts.getState().hide(key) : undefined);
+  const expanded = detail || open;
   return (
     <Html position={position} center zIndexRange={[2, 0]}>
-      <button
-        type="button"
-        className="qtag"
+      <div
+        className={`qtag${expanded ? " is-open" : ""}`}
         style={{ "--qc": color }}
-        onClick={(e) => {
-          e.stopPropagation();
-          hideIt?.();
-        }}
         onPointerDown={(e) => e.stopPropagation()}
-        title="Toque para ocultar esta grandeza"
       >
-        <span className="qtag__head">
-          <span className="qtag__symbol">{symbol}</span>
-          {value != null && <span className="qtag__value">{value}</span>}
-        </span>
-        {name && <span className="qtag__name">{name}</span>}
-        <span className="qtag__x" aria-hidden="true">
+        <button
+          type="button"
+          className="qtag__main"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((o) => !o);
+          }}
+          title={name ? `${name} — toque para ${expanded ? "recolher" : "ver a explicação"}` : undefined}
+        >
+          <span className="qtag__head">
+            <span className="qtag__symbol">{symbol}</span>
+            {value != null && <span className="qtag__value">{value}</span>}
+          </span>
+          {name && <span className="qtag__name">{name}</span>}
+        </button>
+        <button
+          type="button"
+          className="qtag__x"
+          onClick={(e) => {
+            e.stopPropagation();
+            hideIt?.();
+          }}
+          aria-label="Ocultar esta etiqueta"
+          title="Ocultar"
+        >
           ×
-        </span>
-      </button>
+        </button>
+      </div>
     </Html>
   );
 }
@@ -208,7 +230,11 @@ export function QuantityToggles({ items, vis: given }) {
           Ocultar todas
         </button>
       </div>
-      <p className="qtoggles__hint">Toque numa etiqueta dentro da cena para ocultá-la.</p>
+      <DetailSwitch />
+      <p className="qtoggles__hint">
+        Toque numa etiqueta da cena para ver a explicação; no × ela some. O botão 👁 da barra da caneta mostra de novo as
+        que foram ocultadas.
+      </p>
     </div>
   );
 }
@@ -232,4 +258,21 @@ export function Term({ q, children }) {
 // Mostra os filhos só enquanto a grandeza `id` estiver visível (setas etc.).
 export function Concept({ id, children }) {
   return useConceptVisible(id) ? children : null;
+}
+
+// Compactas (só símbolo e valor) x completas (com a explicação).
+export function DetailSwitch() {
+  const detail = useConcepts((s) => s.detail);
+  const setDetail = useConcepts((s) => s.setDetail);
+  return (
+    <div className="qdetail" role="group" aria-label="Tamanho das etiquetas">
+      <span>Etiquetas:</span>
+      <button type="button" className={!detail ? "is-on" : ""} onClick={() => setDetail(false)} aria-pressed={!detail}>
+        compactas
+      </button>
+      <button type="button" className={detail ? "is-on" : ""} onClick={() => setDetail(true)} aria-pressed={detail}>
+        com explicação
+      </button>
+    </div>
+  );
 }

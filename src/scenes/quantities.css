@@ -1,64 +1,114 @@
-/* Etiqueta de grandeza dentro da cena 3D */
+/* Etiqueta de grandeza dentro da cena 3D — compacta por padrão */
 .qtag {
   position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  border: 1.5px solid var(--qc);
+  background: rgba(8, 11, 22, 0.58);
+  color: #f1f3fb;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s ease;
+}
+
+.qtag:hover,
+.qtag.is-open {
+  background: rgba(8, 11, 22, 0.9);
+  z-index: 1;
+}
+
+.qtag__main {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  padding: 5px 22px 5px 10px;
-  border-radius: 10px;
-  border: 2px solid var(--qc);
-  background: rgba(8, 11, 22, 0.86);
-  color: #f1f3fb;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  padding: 2px 4px 2px 7px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-align: left;
-  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s ease;
-}
-
-.qtag:hover {
-  transform: scale(1.05);
 }
 
 .qtag__head {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
 }
 
 .qtag__symbol {
   font-family: "Cambria Math", "STIX Two Math", serif;
-  font-size: 1.02rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--qc);
 }
 
 .qtag__value {
-  font-size: 0.88rem;
+  font-size: 0.74rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
+/* explicação: só ao abrir (toque), ao passar o mouse ou no modo "com explicação" */
 .qtag__name {
+  display: none;
   font-size: 0.66rem;
   color: #b8c0dc;
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+}
+
+.qtag:hover .qtag__name,
+.qtag.is-open .qtag__name {
+  display: block;
 }
 
 .qtag__x {
-  position: absolute;
-  top: 2px;
-  right: 6px;
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 1px 5px 0 2px;
   font-size: 0.8rem;
-  line-height: 1;
+  line-height: 1.2;
   color: #8891b5;
+  cursor: pointer;
+  opacity: 0.7;
 }
 
-.qtag:hover .qtag__x {
+.qtag__x:hover {
   color: #fff;
+  opacity: 1;
+}
+
+.qdetail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: #aab3cf;
+}
+
+.qdetail button {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #aab3cf;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.qdetail button.is-on {
+  border-color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.16);
+  color: #f1f3fb;
 }
 
 /* Painel: botões liga/desliga */
@@ -132,19 +182,15 @@
   border-bottom-style: dashed;
 }
 
-/* Celular: etiquetas mais compactas (só símbolo e valor) */
+/* Celular: etiquetas ainda menores */
 @media (max-width: 820px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
-  .qtag {
-    padding: 3px 18px 3px 7px;
-    border-radius: 8px;
-  }
   .qtag__symbol {
-    font-size: 0.86rem;
+    font-size: 0.76rem;
   }
   .qtag__value {
-    font-size: 0.74rem;
+    font-size: 0.66rem;
   }
-  .qtag__name {
-    display: none;
+  .qtag__main {
+    padding: 1px 3px 1px 5px;
   }
 }

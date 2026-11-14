@@ -80,7 +80,7 @@ export default function Lesson14SkyObservation() {
               <meshBasicMaterial color={s.color} toneMapped={false} />
             </mesh>
             {names && (
-              <Tag position={[0, (s.size + 0.3) * grow(s), 0]} size={0.17 * grow(s)} color="#e5e9f5">
+              <Tag position={[0, (s.size + 0.3) * grow(s), 0]} size={0.085 * grow(s)} color="#e5e9f5">
                 {`${s.name} · ${s.ly} a.l.`}
               </Tag>
             )}

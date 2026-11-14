@@ -241,7 +241,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
         </Concept>
       )}
       {f1 > 0 && (
-        <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) / 2, 1.05, 0.64]} value={`= ${f1} N`} />
+        <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) + 0.55, 0.75, 0.64]} value={`= ${f1} N`} />
       )}
       {pushing && f2 > 0 && (
         <Concept id="f2">
@@ -258,8 +258,8 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
           q={Q.f2}
           position={
             opposite
-              ? [-HALF - 0.08 - arrowLen(f2) / 2, 1.05, 0.64]
-              : [HALF + 0.08 + arrowLen(f2) / 2, 1.6, 0]
+              ? [-HALF - 0.08 - arrowLen(f2) - 0.55, 0.75, 0.64]
+              : [HALF + 0.08 + arrowLen(f2) + 0.55, 1.3, 0]
           }
           value={`= ${f2} N`}
         />
@@ -271,23 +271,23 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
       )}
       <QuantityTag
         q={Q.fres}
-        position={[(Math.sign(fRes) * arrowLen(fRes)) / 2, 2.75, 0]}
+        position={[Math.sign(fRes || 1) * (arrowLen(fRes) + 0.75), 2.3, 0]}
         value={`= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N`}
       />
       {meas && meas.t > 0 && (
         <QuantityTag
           id="agora"
-          position={[0.75, HALF * 2 + 0.35, 0.7]}
+          position={[0, -0.25, 1.2]}
           color="#38bdf8"
           symbol="v"
           value={`= ${num(meas.v)} m/s`}
           name={`t = ${num(meas.t, 1)} s · andou ${num(meas.x, 1)} m${meas.done ? " · parou de empurrar" : ""}`}
         />
       )}
-      <QuantityTag q={Q.m} position={[-0.55, HALF * 2 + 0.3, 0]} value={`= ${mass} kg`} />
+      <QuantityTag q={Q.m} position={[0, HALF * 2 + 0.25, 0]} value={`= ${mass} kg`} />
       <QuantityTag
         q={Q.a}
-        position={[0, 3.45, 0]}
+        position={[0, 3.05, 0]}
         value={`= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²`}
       />
       <QuantityTag

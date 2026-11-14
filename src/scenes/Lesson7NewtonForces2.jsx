@@ -68,21 +68,21 @@ export default function Lesson7NewtonForces2() {
           <Concept id="f">
             <Arrow3D from={[1.15, 0.45, 0.75]} length={aLen(force)} color={Q.f.color} />
           </Concept>
-          <QuantityTag q={Q.f} position={[1.15 + aLen(force) / 2, 1.0, 0.75]} value={`= ${force} N`} />
+          <QuantityTag q={Q.f} position={[1.15 + aLen(force) + 0.9, 0.45, 0.75]} value={`= ${force} N`} />
           {friction > 0 && (
             <Concept id="fat">
               <Arrow3D from={[-1.15, 0.45, 0.75]} dir={-1} length={aLen(friction)} color={Q.fat.color} />
             </Concept>
           )}
           {friction > 0 && (
-            <QuantityTag q={Q.fat} position={[-1.15 - aLen(friction) / 2, 1.0, 0.75]} value={`= ${friction} N`} />
+            <QuantityTag q={Q.fat} position={[-1.15 - aLen(friction) - 0.9, 0.45, 0.75]} value={`= ${friction} N`} />
           )}
           {fRes !== 0 && (
             <Concept id="fres">
               <Arrow3D from={[-0.2, 1.75, 0]} dir={Math.sign(fRes)} length={aLen(fRes)} thickness={1.4} color={Q.fres.color} />
             </Concept>
           )}
-          <QuantityTag q={Q.fres} position={[-0.2 + (Math.sign(fRes || 1) * aLen(fRes)) / 2, 2.2, 0]} value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`} />
+          <QuantityTag q={Q.fres} position={[-0.2 + Math.sign(fRes || 1) * (aLen(fRes) + 1.1), 1.75, 0]} value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`} />
           <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
           <QuantityTag
             q={Q.v}
