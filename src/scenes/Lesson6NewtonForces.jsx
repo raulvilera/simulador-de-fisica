@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useThrottled } from "./useThrottled.js";
 import SceneShell from "./SceneShell.jsx";
@@ -51,8 +52,21 @@ export default function Lesson6NewtonForces() {
           opposite={opposite}
           pushTime={dtA}
           onMeasure={setMeas}
-          meas={meas}
         />
+        {/* velocidade medida: acompanha o caixote (fora do componente, para não
+            redesenhar as pessoas e o caixote a cada atualização) */}
+        <FollowX target={followRef}>
+          {meas.t > 0 && (
+            <QuantityTag
+              id="agora"
+              position={[0, -0.95, 1.2]}
+              color="#38bdf8"
+              symbol="v"
+              value={`= ${num(meas.v)} m/s`}
+              name={`t = ${num(meas.t, 1)} s · andou ${num(meas.x, 1)} m${meas.done ? " · parou de empurrar" : ""}`}
+            />
+          )}
+        </FollowX>
       </SceneShell>
 
       <div className="panel">
@@ -215,33 +229,61 @@ export default function Lesson6NewtonForces() {
   );
 }
 
-// Caixote com as duas pessoas que o empurram. Tudo anda junto: quem aplica a
-// força maior "vence" e a outra pessoa é levada de costas.
+// Grupo que copia a posição X (no mundo) de outro objeto a cada quadro.
+function FollowX({ target, children }) {
+  const g = useRef();
+  const p = useRef(new THREE.Vector3());
+  useFrame(() => {
+    if (target.current && g.current) {
+      target.current.getWorldPosition(p.current);
+      g.current.position.set(p.current.x, p.current.y, 0);
+    }
+  });
+  return <group ref={g}>{children}</group>;
+}
+
+// Caixote e as duas pessoas que o empurram. Enquanto empurram, as pessoas
+// andam junto com o caixote; quando param (fim de Δt), elas ficam onde estão e
+// o caixote segue deslizando sozinho (sem atrito) por mais COAST segundos —
+// é o fim da ação. Tudo em metros, nas proporções reais (caixote de 1,1 m,
+// pessoas de ~1,75 m).
 const HALF = 0.55;
 const START_X = -2.6;
-const LIMIT = 7; // meia largura do caixote
+const COAST = 3; // s de deslizamento depois que param de empurrar
 const SCALE = 1 / 25; // comprimento da seta: 1 unidade a cada 25 N
 const arrowLen = (f) => Math.min(Math.max(Math.abs(f) * SCALE, 0.45), 5);
 
-// As pessoas empurram durante `pushTime` segundos; depois o caixote segue com a
-// velocidade que ganhou (sem atrito). O deslocamento mostrado é comprimido
-// quando seria grande demais para o galpão, e empurrões longos são acelerados
-// na tela — os valores medidos (v, t) são sempre os reais.
-function PushedBox({ objRef, playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure, meas }) {
-  const ref = useRef();
-  const state = useRef({ x: 0, v: 0, t: 0, done: false });
+// O deslocamento mostrado é comprimido quando seria grande demais (o valor
+// medido continua real); empurrões longos são acelerados na tela.
+const PushedBox = memo(function PushedBox({
+  objRef,
+  playing,
+  accel,
+  mass,
+  f1,
+  f2,
+  fRes,
+  opposite,
+  pushTime,
+  onMeasure,
+}) {
+  const crate = useRef();
+  const people = useRef();
+  const state = useRef({ x: 0, v: 0, t: 0, coast: 0, done: false, ended: false });
   const report = useThrottled(onMeasure);
-  const travel = 0.5 * Math.abs(accel) * pushTime * pushTime; // quanto anda empurrando (m)
-  const kVis = travel > 7 ? 7 / travel : 1;
+  const vEnd = Math.abs(accel) * pushTime;
+  const travel = 0.5 * Math.abs(accel) * pushTime * pushTime + vEnd * COAST; // metros reais
+  const kVis = travel > 9 ? 9 / travel : 1;
   const rate = pushTime > 8 ? pushTime / 8 : 1;
   const [pushing, setPushing] = useState(true);
   // nova montagem (novos valores ou reinício): zera a medição do painel
   useEffect(() => onMeasure?.({ v: 0, t: 0, x: 0, done: false }), [onMeasure]);
 
   useFrame((_, delta) => {
-    if (!playing) return;
     const s = state.current;
-    const dt = Math.min(delta, 0.05) * rate;
+    if (!playing || s.ended) return;
+    // passo de tempo real (até 0,1 s por quadro): não "trava" em computadores lentos
+    const dt = Math.min(delta, 0.1) * rate;
     if (s.t < pushTime) {
       const step = Math.min(dt, pushTime - s.t);
       s.v += accel * step;
@@ -252,99 +294,100 @@ function PushedBox({ objRef, playing, accel, mass, f1, f2, fRes, opposite, pushT
         setPushing(false);
       }
     } else {
-      s.x += s.v * dt; // segue em movimento uniforme
+      const step = Math.min(dt, COAST - s.coast);
+      s.x += s.v * step; // segue em movimento uniforme (inércia)
+      s.coast += step;
+      if (s.coast >= COAST) s.ended = true;
     }
-    const vx = Math.min(LIMIT, Math.max(-LIMIT, START_X + s.x * kVis));
-    if (ref.current) ref.current.position.x = vx;
-    const justDone = s.done && !s.sent; // força um último aviso quando o empurrão termina
-    if (justDone) s.sent = true;
-    report({ v: s.v, t: s.t, x: s.x, done: s.done }, justDone);
+    const vx = START_X + s.x * kVis;
+    if (crate.current) crate.current.position.x = vx;
+    if (!s.done && people.current) people.current.position.x = vx; // param onde soltaram o caixote
+    const force = (s.done && !s.sent) || s.ended;
+    if (s.done) s.sent = true;
+    report({ v: s.v, t: s.t, x: s.x, done: s.done }, force);
   });
 
   const side2 = opposite ? 1 : -1; // lado do caixote onde fica quem aplica F2
   return (
-    <group
-      ref={(o) => {
-        ref.current = o;
-        if (objRef) objRef.current = o;
-      }}
-      position={[START_X, 0, 0]}
-    >
-      <Crate size={HALF * 2} />
-
-      {/* pessoa de azul: aplica F1 para a direita */}
-      <Pusher position={[-HALF - 0.62, 0, opposite ? 0 : 0.3]} dir={1} shirt="#3b82f6" />
-      {/* pessoa de vermelho: aplica F2 — no mesmo sentido ou no sentido oposto */}
-      <Pusher
-        position={[side2 * (HALF + 0.62), 0, opposite ? 0 : -0.3]}
-        dir={-side2}
-        shirt="#ef4444"
-        skin="#8d5a3b"
-        hair="#111111"
-        pants="#3a3f45"
-      />
-
-      {/* forças aplicadas no caixote */}
-      {pushing && f1 > 0 && (
-        <Concept id="f1">
-          <Arrow3D from={[HALF + 0.08, 0.75, 0.64]} length={arrowLen(f1)} color={Q.f1.color} />
-        </Concept>
-      )}
-      {f1 > 0 && (
-        <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) + 0.55, 0.75, 0.64]} value={`= ${f1} N`} />
-      )}
-      {pushing && f2 > 0 && (
-        <Concept id="f2">
-          <Arrow3D
-            from={opposite ? [-HALF - 0.08, 0.75, 0.64] : [HALF + 0.08, 1.3, 0]}
-            dir={opposite ? -1 : 1}
-            length={arrowLen(f2)}
-            color={Q.f2.color}
-          />
-        </Concept>
-      )}
-      {f2 > 0 && (
-        <QuantityTag
-          q={Q.f2}
-          position={
-            opposite ? [-HALF - 0.08 - arrowLen(f2) - 0.55, 0.75, 0.64] : [HALF + 0.08 + arrowLen(f2) + 0.55, 1.3, 0]
-          }
-          value={`= ${f2} N`}
+    <>
+      <group ref={people} position={[START_X, 0, 0]}>
+        {/* pessoa de azul: aplica F1 para a direita */}
+        <Pusher position={[-HALF - 0.62, 0, opposite ? 0 : 0.3]} dir={1} shirt="#3b82f6" upright={!pushing} />
+        {/* pessoa de vermelho: aplica F2 — no mesmo sentido ou no sentido oposto */}
+        <Pusher
+          position={[side2 * (HALF + 0.62), 0, opposite ? 0 : -0.3]}
+          dir={-side2}
+          shirt="#ef4444"
+          skin="#8d5a3b"
+          hair="#111111"
+          pants="#3a3f45"
+          shoes="#2b2b2b"
+          upright={!pushing}
         />
-      )}
-      {pushing && fRes !== 0 && (
-        <Concept id="fres">
-          <Arrow3D
-            from={[0, 2.3, 0]}
-            dir={Math.sign(fRes)}
-            length={arrowLen(fRes)}
-            thickness={1.5}
-            color={Q.fres.color}
-          />
-        </Concept>
-      )}
-      <QuantityTag
-        q={Q.fres}
-        position={[Math.sign(fRes || 1) * (arrowLen(fRes) + 0.75), 2.3, 0]}
-        value={`= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N`}
-      />
-      {meas && meas.t > 0 && (
+        {/* a 3ª Lei aparece nos pés de quem empurra: fica junto das pessoas */}
         <QuantityTag
-          id="agora"
-          position={[0, -0.25, 1.2]}
-          color="#38bdf8"
-          symbol="v"
-          value={`= ${num(meas.v)} m/s`}
-          name={`t = ${num(meas.t, 1)} s · andou ${num(meas.x, 1)} m${meas.done ? " · parou de empurrar" : ""}`}
+          q={Q.rr}
+          position={[-HALF - 0.9, 0.18, opposite ? 0.7 : 1]}
+          name="o pé empurra o chão para trás; o chão empurra a pessoa para frente"
         />
-      )}
-      <QuantityTag q={Q.m} position={[0, HALF * 2 + 0.25, 0]} value={`= ${mass} kg`} />
-      <QuantityTag q={Q.a} position={[0, 3.05, 0]} value={`= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²`} />
-      <QuantityTag
-        q={Q.rr}
-        position={[-HALF - 0.9, 0.18, opposite ? 0.7 : 1]}
-        name="o pé empurra o chão para trás; o chão empurra a pessoa para frente"
-      />
-    </group>
+      </group>
+      <group ref={crate} position={[START_X, 0, 0]}>
+        <Crate size={HALF * 2} />
+        {/* ponto que a câmera mantém no centro: meio do caixote */}
+        <group ref={objRef} position={[0, 0.7, 0]} />
+
+        {/* forças aplicadas no caixote */}
+        {pushing && f1 > 0 && (
+          <Concept id="f1">
+            <Arrow3D from={[HALF + 0.08, 0.75, 0.64]} length={arrowLen(f1)} color={Q.f1.color} />
+          </Concept>
+        )}
+        {pushing && f1 > 0 && (
+          <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) + 0.55, 0.75, 0.64]} value={`= ${f1} N`} />
+        )}
+        {pushing && f2 > 0 && (
+          <Concept id="f2">
+            <Arrow3D
+              from={opposite ? [-HALF - 0.08, 0.75, 0.64] : [HALF + 0.08, 1.3, 0]}
+              dir={opposite ? -1 : 1}
+              length={arrowLen(f2)}
+              color={Q.f2.color}
+            />
+          </Concept>
+        )}
+        {pushing && f2 > 0 && (
+          <QuantityTag
+            q={Q.f2}
+            position={
+              opposite ? [-HALF - 0.08 - arrowLen(f2) - 0.55, 0.75, 0.64] : [HALF + 0.08 + arrowLen(f2) + 0.55, 1.3, 0]
+            }
+            value={`= ${f2} N`}
+          />
+        )}
+        {pushing && fRes !== 0 && (
+          <Concept id="fres">
+            <Arrow3D
+              from={[0, 2.3, 0]}
+              dir={Math.sign(fRes)}
+              length={arrowLen(fRes)}
+              thickness={1.5}
+              color={Q.fres.color}
+            />
+          </Concept>
+        )}
+        <QuantityTag
+          q={Q.fres}
+          position={[Math.sign(fRes || 1) * (arrowLen(fRes) + 0.75), 2.3, 0]}
+          value={pushing ? `= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N` : "= 0 N"}
+          name={pushing ? "força resultante" : "ninguém empurra: o caixote segue por inércia (1ª Lei)"}
+        />
+        <QuantityTag q={Q.m} position={[0, HALF * 2 + 0.25, 0]} value={`= ${mass} kg`} />
+        <QuantityTag
+          q={Q.a}
+          position={[0, 3.05, 0]}
+          value={pushing ? `= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²` : "= 0 (velocidade constante)"}
+        />
+      </group>
+    </>
   );
-}
+});

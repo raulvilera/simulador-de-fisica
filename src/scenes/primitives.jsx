@@ -201,11 +201,21 @@ export function Arrow3D({ from = [0, 0.5, 0], length = 1, color = "#f59e0b", lab
   );
 }
 
-// Pessoa estilizada empurrando algo à sua frente (aulas de força). Fica virada
-// para +X (`dir` = 1) ou −X (`dir` = −1); as pernas dão passos de acordo com o
-// quanto ela realmente se deslocou na cena, para a frente ou para trás.
-const HIP_Y = 0.84;
-const LEG = 0.88;
+// Pessoa empurrando algo à sua frente (aulas de força), com proporções de um
+// adulto real (~1,75 m — a cena das forças está em metros): cabeça ≈ 1/7,5 da
+// altura, pernas com coxa e canela (joelho), braços com cotovelo, mãos, pescoço,
+// tronco afunilado, cinto e tênis. O corpo se inclina ~35° para a frente e as
+// mãos se apoiam a `reach` m dos quadris, na altura do peito.
+// Fica virada para +X (`dir` = 1) ou −X (`dir` = −1); as pernas dão passos de
+// acordo com o quanto ela realmente se deslocou na cena.
+const HIP_Y = 0.92;
+const THIGH = 0.46;
+const SHIN = 0.44;
+const TORSO = 0.55;
+const UPPER_ARM = 0.3;
+const FOREARM = 0.28;
+const LEAN = 0.6; // rad (~35°)
+
 function limb(from, to) {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
@@ -215,9 +225,41 @@ function limb(from, to) {
     length: Math.hypot(dx, dy),
   };
 }
-export function Pusher({ position = [0, 0, 0], dir = 1, shirt = "#3b82f6", skin = "#c98d63", hair = "#2a1d14", pants = "#27324a", reach = 0.62 }) {
+
+// Cotovelo por cinemática inversa de 2 ossos, no plano XY (dobra para baixo).
+function elbowOf(sx, sy, hx, hy) {
+  const dx = hx - sx;
+  const dy = hy - sy;
+  const d = Math.min(Math.hypot(dx, dy), UPPER_ARM + FOREARM - 1e-3);
+  const base = Math.atan2(dy, dx);
+  const a = Math.acos((UPPER_ARM * UPPER_ARM + d * d - FOREARM * FOREARM) / (2 * UPPER_ARM * d));
+  return [sx + Math.cos(base - a) * UPPER_ARM, sy + Math.sin(base - a) * UPPER_ARM];
+}
+
+function Seg({ from, to, r0, r1 = r0, color, z = 0 }) {
+  const l = limb([from[0], from[1], z], [to[0], to[1], z]);
+  return (
+    <mesh position={l.position} rotation={l.rotation} castShadow>
+      <cylinderGeometry args={[r1, r0, l.length, 12]} />
+      <meshStandardMaterial color={color} roughness={0.85} />
+    </mesh>
+  );
+}
+
+export function Pusher({
+  position = [0, 0, 0],
+  dir = 1,
+  shirt = "#3b82f6",
+  skin = "#c98d63",
+  hair = "#2a1d14",
+  pants = "#27324a",
+  shoes = "#f1f1f1",
+  reach = 0.62,
+  upright = false, // true = parou de empurrar: fica em pé, braços ao lado do corpo
+}) {
   const root = useRef();
-  const legs = useRef([]);
+  const thighs = useRef([]);
+  const shins = useRef([]);
   const last = useRef(null);
   const phase = useRef(0);
 
@@ -227,63 +269,124 @@ export function Pusher({ position = [0, 0, 0], dir = 1, shirt = "#3b82f6", skin 
     g.getWorldPosition(tmpPos);
     if (last.current != null) {
       const d = (tmpPos.x - last.current) * dir;
-      if (Math.abs(d) < 3) phase.current += d * 3.6;
+      if (Math.abs(d) < 3) phase.current += d * 4.2;
     }
     last.current = tmpPos.x;
-    legs.current.forEach((leg, i) => {
-      if (leg) leg.rotation.z = -0.32 + Math.sin(phase.current + i * Math.PI) * 0.42;
-    });
+    // passada de quem empurra: pernas para trás, joelho dobra quando a perna avança
+    for (let i = 0; i < 2; i++) {
+      const s = Math.sin(phase.current + i * Math.PI);
+      if (thighs.current[i]) thighs.current[i].rotation.z = upright ? 0 : -0.38 + s * 0.32;
+      if (shins.current[i]) shins.current[i].rotation.z = upright ? 0 : -0.12 - Math.max(0, s) * 0.55;
+    }
   });
 
-  // tronco inclinado para a frente; mãos apoiadas a `reach` metros dos quadris
-  const shoulder = [0.27, HIP_Y + 0.5];
-  const hand = [reach, 0.82];
-  const torso = limb([0, HIP_Y, 0], [shoulder[0], shoulder[1], 0]);
+  // tronco inclinado (ou em pé); ombros, pescoço e cabeça seguem a inclinação
+  const lean = upright ? 0.06 : LEAN;
+  const sx = Math.sin(lean) * TORSO;
+  const sy = HIP_Y + Math.cos(lean) * TORSO;
+  const neck = [sx + Math.sin(lean) * 0.1, sy + Math.cos(lean) * 0.1];
+  const head = [sx + Math.sin(lean) * 0.22, sy + Math.cos(lean) * 0.22];
+  const hand = upright ? [sx + 0.06, sy - 0.56] : [reach, 1.02];
+  const torso = limb([0, HIP_Y, 0], [sx, sy, 0]);
+
   return (
     <group ref={root} position={position} rotation={[0, dir < 0 ? Math.PI : 0, 0]}>
-      {[-0.11, 0.11].map((z, i) => (
-        <group key={z} ref={(el) => void (legs.current[i] = el)} position={[0, HIP_Y, z]}>
-          <mesh position={[0, -LEG / 2, 0]} castShadow>
-            <capsuleGeometry args={[0.075, LEG - 0.15, 4, 10]} />
-            <meshLambertMaterial color={pants} />
+      {/* pernas: coxa → joelho → canela → tênis */}
+      {[-0.1, 0.1].map((z, i) => (
+        <group key={z} ref={(el) => void (thighs.current[i] = el)} position={[0, HIP_Y, z]}>
+          <mesh position={[0, -THIGH / 2, 0]} castShadow>
+            <cylinderGeometry args={[0.075, 0.062, THIGH, 12]} />
+            <meshStandardMaterial color={pants} roughness={0.9} />
           </mesh>
-          <mesh position={[0.06, -LEG + 0.02, 0]}>
-            <boxGeometry args={[0.27, 0.1, 0.12]} />
-            <meshLambertMaterial color="#1b1b1f" />
-          </mesh>
+          <group ref={(el) => void (shins.current[i] = el)} position={[0, -THIGH, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.062, 10, 8]} />
+              <meshStandardMaterial color={pants} roughness={0.9} />
+            </mesh>
+            <mesh position={[0, -SHIN / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.058, 0.045, SHIN, 12]} />
+              <meshStandardMaterial color={pants} roughness={0.9} />
+            </mesh>
+            <mesh position={[0.05, -SHIN - 0.035, 0]} castShadow>
+              <boxGeometry args={[0.26, 0.08, 0.1]} />
+              <meshStandardMaterial color={shoes} roughness={0.6} />
+            </mesh>
+            <mesh position={[0.05, -SHIN - 0.072, 0]}>
+              <boxGeometry args={[0.27, 0.015, 0.105]} />
+              <meshStandardMaterial color="#3a3a3a" roughness={0.9} />
+            </mesh>
+          </group>
         </group>
       ))}
-      <mesh position={torso.position} rotation={torso.rotation} castShadow>
-        <capsuleGeometry args={[0.17, torso.length - 0.16, 4, 12]} />
-        <meshLambertMaterial color={shirt} />
+      {/* quadril e cinto */}
+      <mesh position={[0, HIP_Y + 0.02, 0]} scale={[0.75, 0.6, 1]} castShadow>
+        <sphereGeometry args={[0.17, 14, 10]} />
+        <meshStandardMaterial color={pants} roughness={0.9} />
       </mesh>
+      <mesh position={[Math.sin(lean) * 0.07, HIP_Y + 0.08, 0]} rotation={torso.rotation}>
+        <cylinderGeometry args={[0.15, 0.15, 0.04, 16]} />
+        <meshStandardMaterial color="#3b2a1e" roughness={0.6} />
+      </mesh>
+      {/* tronco afunilado (ombros mais largos que a cintura), achatado na frente */}
+      <mesh position={torso.position} rotation={torso.rotation} scale={[0.7, 1, 1]} castShadow>
+        <cylinderGeometry args={[0.2, 0.15, TORSO, 16]} />
+        <meshStandardMaterial color={shirt} roughness={0.85} />
+      </mesh>
+      <mesh position={[sx, sy, 0]} scale={[0.7, 0.55, 1]}>
+        <sphereGeometry args={[0.2, 16, 10]} />
+        <meshStandardMaterial color={shirt} roughness={0.85} />
+      </mesh>
+      {/* pescoço e cabeça */}
+      <Seg from={[sx, sy]} to={neck} r0={0.05} color={skin} />
+      <group position={[head[0], head[1], 0]} rotation={[0, 0, -lean * 0.55]}>
+        <mesh scale={[0.95, 1.12, 0.88]} castShadow>
+          <sphereGeometry args={[0.105, 20, 16]} />
+          <meshStandardMaterial color={skin} roughness={0.7} />
+        </mesh>
+        {/* cabelo */}
+        <mesh position={[-0.012, 0.02, 0]} scale={[1.02, 1.1, 0.95]}>
+          <sphereGeometry args={[0.108, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+          <meshStandardMaterial color={hair} roughness={0.9} />
+        </mesh>
+        {/* olhos, nariz e orelhas (o rosto olha para +X) */}
+        {[-0.035, 0.035].map((z) => (
+          <mesh key={z} position={[0.09, 0.012, z]}>
+            <sphereGeometry args={[0.011, 8, 6]} />
+            <meshBasicMaterial color="#1a1a1a" />
+          </mesh>
+        ))}
+        <mesh position={[0.103, -0.01, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.014, 0.03, 8]} />
+          <meshStandardMaterial color={skin} roughness={0.7} />
+        </mesh>
+        {[-0.095, 0.095].map((z) => (
+          <mesh key={z} position={[0, 0, z]} scale={[0.6, 1, 0.4]}>
+            <sphereGeometry args={[0.025, 8, 6]} />
+            <meshStandardMaterial color={skin} roughness={0.7} />
+          </mesh>
+        ))}
+      </group>
+      {/* braços: ombro → cotovelo (manga) → antebraço → mão espalmada no objeto */}
       {[-0.2, 0.2].map((z) => {
-        const arm = limb([shoulder[0], shoulder[1] - 0.04, z], [hand[0], hand[1], z]);
+        const sh = [sx - 0.02, sy - 0.03];
+        const el = elbowOf(sh[0], sh[1], hand[0], hand[1]);
+        const sleeve = [sh[0] + (el[0] - sh[0]) * 0.55, sh[1] + (el[1] - sh[1]) * 0.55];
         return (
           <group key={z}>
-            <mesh position={arm.position} rotation={arm.rotation}>
-              <capsuleGeometry args={[0.052, arm.length - 0.1, 4, 8]} />
-              <meshLambertMaterial color={skin} />
+            <mesh position={[sh[0], sh[1], z]}>
+              <sphereGeometry args={[0.065, 10, 8]} />
+              <meshStandardMaterial color={shirt} roughness={0.85} />
             </mesh>
-            <mesh position={[shoulder[0] + 0.03, shoulder[1] - 0.06, z]}>
-              <sphereGeometry args={[0.085, 10, 8]} />
-              <meshLambertMaterial color={shirt} />
-            </mesh>
-            <mesh position={[hand[0], hand[1], z]}>
-              <sphereGeometry args={[0.062, 10, 8]} />
-              <meshLambertMaterial color={skin} />
+            <Seg from={sh} to={sleeve} r0={0.058} r1={0.06} color={shirt} z={z} />
+            <Seg from={sleeve} to={el} r0={0.045} r1={0.048} color={skin} z={z} />
+            <Seg from={el} to={hand} r0={0.04} r1={0.044} color={skin} z={z} />
+            <mesh position={[hand[0] - 0.01, hand[1], z]}>
+              <boxGeometry args={[0.035, 0.1, 0.085]} />
+              <meshStandardMaterial color={skin} roughness={0.7} />
             </mesh>
           </group>
         );
       })}
-      <mesh position={[shoulder[0] + 0.13, shoulder[1] + 0.2, 0]} castShadow>
-        <sphereGeometry args={[0.125, 16, 12]} />
-        <meshLambertMaterial color={skin} />
-      </mesh>
-      <mesh position={[shoulder[0] + 0.11, shoulder[1] + 0.225, 0]} rotation={[0, 0, 0.5]}>
-        <sphereGeometry args={[0.132, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshLambertMaterial color={hair} />
-      </mesh>
     </group>
   );
 }
