@@ -3,44 +3,61 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Tag, Sun, Earth, Planet, OrbitRing, ArrowBetween } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import { QuantityTag, QuantityToggles, Concept } from "./quantities.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
   f: { id: "f", symbol: "F", name: "força de atração (igual nos dois corpos)", color: "#f87171" },
+  peso: { id: "peso", symbol: "P = m·g", name: "peso de um objeto na superfície do corpo 1", color: "#fbbf24" },
   par: { id: "par", symbol: "Ação e reação", name: "um puxa o outro com a mesma força", color: "#f472b6" },
   mare: { id: "mare", symbol: "Maré alta", name: "oceano puxado na direção da Lua", color: "#38bdf8" },
   lua: { id: "lua", symbol: "Atração da Lua", name: "força gravitacional sobre a Terra", color: "#f87171" },
   alinh: { id: "alinh", symbol: "Alinhamento", name: "Sol, Terra e Lua", color: "#facc15" },
 };
-const Q_LAW = [Q.f, Q.par];
+const Q_LAW = [Q.f, Q.par, Q.peso];
 const Q_TIDES = [Q.mare, Q.lua, Q.alinh];
 
 // --- Modo 1: dois corpos e a Lei da Gravitação Universal -------------------
-function TwoBodies({ m1, m2, d, force }) {
-  const r1 = 0.35 + Math.cbrt(m1) * 0.28;
-  const r2 = 0.35 + Math.cbrt(m2) * 0.28;
-  const x1 = -d / 2;
-  const x2 = d / 2;
+// Aceita qualquer valor: distâncias grandes são comprimidas na tela (o rótulo
+// mostra o valor real), as esferas crescem com a massa até um limite e as
+// setas crescem com a força sem sair do espaço entre os corpos.
+function TwoBodies({ m1, m2, d, force, mP, gP }) {
+  const dS = Math.min(Math.max(d, 1.2), 12);
+  const rMax = Math.max(0.15, dS / 2 - 0.25);
+  const r1 = Math.min(0.35 + Math.cbrt(m1) * 0.28, rMax, 2.4);
+  const r2 = Math.min(0.35 + Math.cbrt(m2) * 0.28, rMax, 2.4);
+  const x1 = -dS / 2;
+  const x2 = dS / 2;
   // As duas forças têm a MESMA intensidade (ação e reação), em sentidos opostos.
-  const len = Math.min(0.5 + force * 0.35, d / 2 - 0.1);
+  const len = Math.max(0.25, Math.min(0.4 + (2.2 * force) / (force + 1.5), dS / 2 - 0.1));
   return (
     <>
       <pointLight position={[0, 8, 8]} intensity={2.4} decay={0} />
       <group position={[x1, 0, 0]}>
         <Planet radius={r1} color="#3b82f6" />
-        <Tag position={[0, r1 + 0.45, 0]} color="#93c5fd">{`m1 = ${m1}`}</Tag>
+        <Tag position={[0, r1 + 0.45, 0]} color="#93c5fd">{`m1 = ${num(m1)}`}</Tag>
       </group>
       <group position={[x2, 0, 0]}>
         <Planet radius={r2} color="#f59e0b" />
-        <Tag position={[0, r2 + 0.45, 0]} color="#fcd34d">{`m2 = ${m2}`}</Tag>
+        <Tag position={[0, r2 + 0.45, 0]} color="#fcd34d">{`m2 = ${num(m2)}`}</Tag>
       </group>
       <ArrowBetween from={[x1, -r1 - 0.35, 0]} to={[x1 + len, -r1 - 0.35, 0]} color="#f87171" />
       <ArrowBetween from={[x2, -r2 - 0.35, 0]} to={[x2 - len, -r2 - 0.35, 0]} color="#f87171" />
       <ArrowBetween from={[x1, 2.6, 0]} to={[x2, 2.6, 0]} color="#64748b" thickness={0.02} />
-      <Tag position={[0, 3.0, 0]} color="#aab3cf">{`d = ${d}`}</Tag>
-      <QuantityTag q={Q.f} position={[0, -1.9, 0]} value={`= ${m1} × ${m2} ÷ ${d}² = ${force.toFixed(2).replace(".", ",")}`} />
+      <Tag position={[0, 3.0, 0]} color="#aab3cf">{`d = ${num(d)}${d > 12 ? " (fora de escala)" : ""}`}</Tag>
+      <QuantityTag q={Q.f} position={[0, -1.9, 0]} value={`= ${num(m1)} × ${num(m2)} ÷ ${num(d)}² = ${num(force, 4)}`} />
+      {/* peso de um objeto de massa m na superfície do corpo 1 (F = m·g) */}
+      <Concept id="peso">
+        <group position={[x1, r1 + 0.18, 0.9]}>
+          <mesh position={[0, 0.12, 0]}>
+            <boxGeometry args={[0.18, 0.24, 0.18]} />
+            <meshStandardMaterial color="#e5e7eb" />
+          </mesh>
+          <ArrowBetween from={[0.28, 0.25, 0]} to={[0.28, -0.35, 0]} color="#fbbf24" />
+        </group>
+      </Concept>
+      <QuantityTag q={Q.peso} position={[x1 + 0.4, r1 + 1.15, 0.9]} value={`= ${num(mP)} × ${num(gP)} = ${num(mP * gP)} N`} />
       <QuantityTag q={Q.par} position={[0, -2.9, 0]} />
     </>
   );
@@ -107,7 +124,7 @@ export default function Lesson17Gravitation() {
       <SceneShell space cameraPosition={[-2, 8, 17]} controlsTarget={[-2, 0, 0]}>
         {mode === "law" ? (
           <group position={[-2, 0, 0]}>
-            <TwoBodies m1={m1} m2={m2} d={d} force={force} />
+            <TwoBodies m1={m1} m2={m2} d={d} force={force} mP={mP} gP={gP} />
           </group>
         ) : (
           <Tides moonAngle={moonAngle} playing={playing} setMoonAngle={setMoonAngle} />
@@ -131,7 +148,7 @@ export default function Lesson17Gravitation() {
               <Slider label="Distância" value={d} onChange={setD} min={3} max={10} step={1} />
               <Readout
                 items={[
-                  { label: "Força (m1·m2 / d²)", value: force.toFixed(2).replace(".", ",") },
+                  { label: "Força (m1·m2 / d²)", value: num(force, 4) },
                   { label: "Dobrando a distância", value: "Força ÷ 4" },
                 ]}
               />
@@ -165,18 +182,18 @@ export default function Lesson17Gravitation() {
                 { symbol: "d", name: "distância entre os centros dos corpos", color: "#aab3cf" },
               ]}
               inputs={[
-                { key: "m1", symbol: "m₁", value: m1, onChange: setM1, min: 1, max: 10, color: "#93c5fd" },
-                { key: "m2", symbol: "m₂", value: m2, onChange: setM2, min: 1, max: 10, color: "#fcd34d" },
-                { key: "d", symbol: "d", value: d, onChange: setD, min: 3, max: 10, color: "#aab3cf" },
+                { key: "m1", symbol: "m₁", value: m1, onChange: setM1, min: 0.001, max: 1e12, color: "#93c5fd" },
+                { key: "m2", symbol: "m₂", value: m2, onChange: setM2, min: 0.001, max: 1e12, color: "#fcd34d" },
+                { key: "d", symbol: "d", value: d, onChange: setD, min: 0.001, max: 1e12, color: "#aab3cf" },
               ]}
               steps={
                 <>
-                  F = {num(m1)} × {num(m2)} ÷ {num(d)}² = <b>{num(force)}</b>
+                  F = {num(m1)} × {nump(m2)} ÷ {nump(d)}² = <b>{num(force)}</b>
                   <br />
                   com d = {num(2 * d)} (o dobro): F = <b>{num(force / 4)}</b> (÷ 4)
                 </>
               }
-              note="Na cena, massas de 1 a 10 e distância de 3 a 10 (unidades relativas)."
+              note="A cena usa os valores digitados (unidades relativas); distâncias acima de 12 aparecem comprimidas."
               onReset={() => {
                 setM1(6);
                 setM2(2);
@@ -192,12 +209,12 @@ export default function Lesson17Gravitation() {
                 { symbol: "g", name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)", unit: "m/s²", color: "#fbbf24" },
               ]}
               inputs={[
-                { key: "m", symbol: "m", unit: "kg", value: mP, onChange: setMP, min: 0, max: 1000000, color: "#93c5fd" },
-                { key: "g", symbol: "g", unit: "m/s²", value: gP, onChange: setGP, min: 0, max: 1000, color: "#fbbf24" },
+                { key: "m", symbol: "m", unit: "kg", value: mP, onChange: setMP, min: 0, max: 1e12, color: "#93c5fd" },
+                { key: "g", symbol: "g", unit: "m/s²", value: gP, onChange: setGP, min: 0, max: 1e12, color: "#fbbf24" },
               ]}
               steps={
                 <>
-                  F = {num(mP)} × {num(gP)} = <b>{num(mP * gP)} N</b>
+                  F = {num(mP)} × {nump(gP)} = <b>{num(mP * gP)} N</b>
                 </>
               }
               onReset={() => {

@@ -2,9 +2,10 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -32,7 +33,14 @@ export default function Lesson5VelocityMulti() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.8, 18]} controlsTarget={[6, 1.8, 0]}>
-        <RulerTrack length={14} start={0} highlight={[0, (14 * d1) / (d1 + d2), 14]} />
+        {/* a pista inteira (0 → 14) representa d₁ + d₂: as marcas mostram km */}
+        <RulerTrack
+          length={14}
+          start={0}
+          step={(niceStep((d1 + d2) / 10) * 14) / (d1 + d2)}
+          labelOf={(x) => fmtNum((x * (d1 + d2)) / 14, 1)}
+          highlight={[0, (14 * d1) / (d1 + d2), 14]}
+        />
         <AnimatedCar
           key={resetKey}
           playing={playing}
@@ -117,18 +125,18 @@ export default function Lesson5VelocityMulti() {
             { symbol: "d₂, v₂", name: "distância e velocidade do trecho 2", color: Q.t2.color },
           ]}
           inputs={[
-            { key: "d1", symbol: "d₁", unit: "km", value: d1, onChange: setD1, min: 0.1, max: 100000, color: Q.t1.color },
-            { key: "v1", symbol: "v₁", unit: "km/h", value: v1, onChange: setV1, min: 0.1, max: 100000, color: Q.t1.color },
-            { key: "d2", symbol: "d₂", unit: "km", value: d2, onChange: setD2, min: 0.1, max: 100000, color: Q.t2.color },
-            { key: "v2", symbol: "v₂", unit: "km/h", value: v2, onChange: setV2, min: 0.1, max: 100000, color: Q.t2.color },
+            { key: "d1", symbol: "d₁", unit: "km", value: d1, onChange: setD1, min: 0.001, max: 1e12, color: Q.t1.color },
+            { key: "v1", symbol: "v₁", unit: "km/h", value: v1, onChange: setV1, min: 0.001, max: 1e12, color: Q.t1.color },
+            { key: "d2", symbol: "d₂", unit: "km", value: d2, onChange: setD2, min: 0.001, max: 1e12, color: Q.t2.color },
+            { key: "v2", symbol: "v₂", unit: "km/h", value: v2, onChange: setV2, min: 0.001, max: 1e12, color: Q.t2.color },
           ]}
           steps={
             <>
-              t₁ = {num(d1)} ÷ {num(v1)} = {num(t1)} h · t₂ = {num(d2)} ÷ {num(v2)} = {num(t2)} h
-              <br />v = ({num(d1)} + {num(d2)}) ÷ ({num(t1)} + {num(t2)}) = <b>{num(vMediaTotal)} km/h</b>
+              t₁ = {num(d1)} ÷ {nump(v1)} = {num(t1)} h · t₂ = {num(d2)} ÷ {nump(v2)} = {num(t2)} h
+              <br />v = ({num(d1)} + {nump(d2)}) ÷ ({nump(t1)} + {nump(t2)}) = <b>{num(vMediaTotal)} km/h</b>
               <br />
               <span style={{ color: "#fca5a5" }}>
-                média aritmética ({num(v1)} + {num(v2)}) ÷ 2 = {num(vMediaErrada)} km/h ✗
+                média aritmética ({num(v1)} + {nump(v2)}) ÷ 2 = {num(vMediaErrada)} km/h ✗
               </span>
             </>
           }
@@ -154,7 +162,8 @@ export default function Lesson5VelocityMulti() {
 function AnimatedCar({ playing, resetKey, t1, t2, splitX }) {
   const ref = useRef();
   const clock = useRef(0);
-  const SCALE = 2; // segundos de simulação por "hora" do problema, só para visualização
+  // o percurso todo dura ~8 s na tela, mantendo a proporção entre t₁ e t₂
+  const SCALE = 8 / (t1 + t2);
 
   useFrame((_, delta) => {
     if (!playing) return;

@@ -13,10 +13,13 @@ export function Label3D(props) {
 
 // Pista de medição pintada no asfalto: faixa escura, bordas brancas e uma marca
 // a cada metro. Usada em quase todas as aulas de cinemática.
-export function RulerTrack({ length = 20, start = 0, step = 1, z = 0, highlight = [] }) {
+// `labelOf(x)` (opcional) troca o número escrito em cada marca — usado quando a
+// pista representa outra escala (ex.: km, ou metros comprimidos).
+export function RulerTrack({ length = 20, start = 0, step = 1, z = 0, highlight = [], labelOf }) {
   const marks = useMemo(() => {
     const arr = [];
-    for (let i = 0; i <= length; i += step) arr.push(start + i);
+    const n = Math.round(length / step);
+    for (let i = 0; i <= n; i++) arr.push(start + i * step);
     return arr;
   }, [length, start, step]);
   const isHi = (m) => highlight.some((h) => Math.abs(h - m) < 1e-6);
@@ -61,7 +64,7 @@ export function RulerTrack({ length = 20, start = 0, step = 1, z = 0, highlight 
               anchorX="center"
               anchorY="middle"
             >
-              {m}
+              {labelOf ? labelOf(m) : m}
             </Label3D>
           </group>
         );

@@ -10,8 +10,11 @@ import "./FormulaCard.css";
 export const num = (v, digits = 2) => {
   if (!Number.isFinite(v)) return "—";
   const r = Math.round(v * 10 ** digits) / 10 ** digits;
-  return r.toLocaleString("pt-BR", { maximumFractionDigits: digits });
+  return r.toLocaleString("pt-BR", { maximumFractionDigits: digits }).replace(/^-/, "−");
 };
+
+// Número dentro de uma conta: negativo vai entre parênteses — 25 − (−4).
+export const nump = (v, digits = 2) => (v < 0 ? `(${num(v, digits)})` : num(v, digits));
 
 // Campo numérico que aceita vírgula ou ponto e não "briga" com quem digita.
 export function NumberField({ value, onChange, min, max, unit, label, color }) {

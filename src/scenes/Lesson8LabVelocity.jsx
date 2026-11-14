@@ -3,9 +3,10 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { niceStep, fmtNum } from "./scale.js";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -36,13 +37,14 @@ export default function Lesson8LabVelocity() {
     setTrials((prev) =>
       prev.length >= 5
         ? prev
-        : [...prev, { ds: TRACK_LENGTH_CM, dt: time, v: TRACK_LENGTH_CM / time }]
+        : [...prev, { ds: dsCalc, dt: time, v: dsCalc / time }]
     );
   };
 
   // calculadora: começa com a pista de 24 cm; Δt recebe cada nova medição
   const [dsCalc, setDsCalc] = useState(TRACK_LENGTH_CM);
   const [dtCalc, setDtCalc] = useState(3);
+  const [dtTyped, setDtTyped] = useState(null); // Δt digitado: o carrinho leva exatamente esse tempo
   const lastDt = trials.length ? trials[trials.length - 1].dt : null;
   useEffect(() => {
     if (lastDt != null) setDtCalc(Math.round(lastDt * 100) / 100);
@@ -54,11 +56,20 @@ export default function Lesson8LabVelocity() {
   return (
     <div className="lesson__canvas">
       <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.6, 0.8, 0]}>
-        <RulerTrack length={SCENE_LENGTH} start={0} highlight={[0, SCENE_LENGTH]} />
+        {/* a pista (8 unidades) representa o ΔS digitado: as marcas mostram cm */}
+        <RulerTrack
+          length={SCENE_LENGTH}
+          start={0}
+          step={(niceStep(dsCalc / 8) * SCENE_LENGTH) / dsCalc}
+          labelOf={(x) => fmtNum((x * dsCalc) / SCENE_LENGTH, 1)}
+          highlight={[0, SCENE_LENGTH]}
+        />
         <FrictionCart
           running={running}
           resetKey={resetKey}
           onFinish={onFinish}
+          ds={dsCalc}
+          dtTarget={dtTyped}
           onTick={setElapsed}
         >
           <QuantityTag q={Q.dt} position={[0, 1.9, 0]} value={`= ${c2(elapsed)} s`} />
@@ -66,12 +77,12 @@ export default function Lesson8LabVelocity() {
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => SCENE_LENGTH} y={1.9} z={-0.6} color={Q.ds.color} />
         </Concept>
-        <QuantityTag q={Q.ds} position={[SCENE_LENGTH / 2, 2.3, -0.6]} value={`= ${TRACK_LENGTH_CM} cm`} name="da largada até a chegada" />
+        <QuantityTag q={Q.ds} position={[SCENE_LENGTH / 2, 2.3, -0.6]} value={`= ${num(dsCalc)} cm`} name="da largada até a chegada" />
         {trials.length > 0 && (
           <QuantityTag
             q={Q.v}
             position={[SCENE_LENGTH + 0.6, 1.2, 0]}
-            value={`= ${TRACK_LENGTH_CM} ÷ ${c2(trials[trials.length - 1].dt)} = ${trials[trials.length - 1].v.toFixed(1).replace(".", ",")} cm/s`}
+            value={`= ${num(trials[trials.length - 1].ds)} ÷ ${c2(trials[trials.length - 1].dt)} = ${num(trials[trials.length - 1].v, 1)} cm/s`}
             name="última medição"
           />
         )}
@@ -105,7 +116,7 @@ export default function Lesson8LabVelocity() {
           </div>
           <Readout
             items={[
-              { label: "ΔS (pista)", value: `${TRACK_LENGTH_CM} cm` },
+              { label: "ΔS (pista)", value: `${num(dsCalc)} cm` },
               { label: "Medições feitas", value: `${trials.length} / 5` },
               { label: "v média (ΔS/Δt)", value: trials.length ? `${avgV.toFixed(1)} cm/s` : "—" },
             ]}
@@ -140,17 +151,18 @@ export default function Lesson8LabVelocity() {
             { symbol: "Δt", name: "intervalo de tempo medido no cronômetro", unit: "s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "ds", symbol: "ΔS", unit: "cm", value: dsCalc, onChange: setDsCalc, min: 0, max: 100000, color: Q.ds.color },
-            { key: "dt", symbol: "Δt", unit: "s", value: dtCalc, onChange: setDtCalc, min: 0.01, max: 100000, color: Q.dt.color },
+            { key: "ds", symbol: "ΔS", unit: "cm", value: dsCalc, onChange: setDsCalc, min: 0.001, max: 1e12, color: Q.ds.color },
+            { key: "dt", symbol: "Δt", unit: "s", value: dtCalc, onChange: (v) => { setDtCalc(v); setDtTyped(v); }, min: 0.001, max: 1e12, color: Q.dt.color },
           ]}
           steps={
             <>
-              V = {num(dsCalc)} ÷ {num(dtCalc)} = <b>{num(dsCalc / dtCalc)} cm/s</b>
+              V = {num(dsCalc)} ÷ {nump(dtCalc)} = <b>{num(dsCalc / dtCalc)} cm/s</b>
             </>
           }
-          note="Δt é preenchido com o tempo de cada nova medição; você também pode digitar os valores medidos em sala."
+          note="A pista passa a ter o ΔS digitado. Digitando Δt, o carrinho leva exatamente esse tempo nas próximas medições (sem digitar, cada tentativa varia um pouco, como no experimento real)."
           onReset={() => {
             setDsCalc(TRACK_LENGTH_CM);
+            setDtTyped(null);
             setDtCalc(lastDt != null ? Math.round(lastDt * 100) / 100 : 3);
           }}
         />
@@ -166,21 +178,29 @@ export default function Lesson8LabVelocity() {
   );
 }
 
-function FrictionCart({ running, resetKey, onFinish, onTick, children }) {
+// Velocidade "de fábrica" do carrinho quando Δt não foi digitado: 6 a 7,8 cm/s.
+const randomSpeed = () => 6 + Math.random() * 1.8;
+
+// O carrinho percorre a pista (ΔS) em T segundos reais: T = Δt digitado, ou
+// ΔS ÷ velocidade sorteada. Tempos muito longos/curtos são acelerados/
+// desacelerados na tela, mas o cronômetro mostra sempre o tempo real.
+function FrictionCart({ running, resetKey, onFinish, onTick, ds, dtTarget, children }) {
   const ref = useRef();
   const t = useRef(0);
-  const speed = useRef(2 + Math.random() * 0.6); // variação entre tentativas
+  const T = useRef(null);
   const tick = useThrottled(onTick, 80);
 
   useFrame((_, delta) => {
     if (!running) return;
-    t.current += delta;
-    const x = Math.min(speed.current * t.current, SCENE_LENGTH);
+    if (T.current == null) T.current = dtTarget ?? ds / randomSpeed();
+    const rate = T.current > 8 ? T.current / 8 : T.current < 0.6 ? T.current / 0.6 : 1;
+    t.current = Math.min(t.current + delta * rate, T.current);
+    const x = (t.current / T.current) * SCENE_LENGTH;
     if (ref.current) ref.current.position.x = x;
     tick(t.current);
-    if (x >= SCENE_LENGTH) {
-      onFinish?.(t.current);
-      speed.current = 2 + Math.random() * 0.6;
+    if (t.current >= T.current) {
+      onFinish?.(T.current);
+      T.current = null;
       t.current = 0;
     }
   });

@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useThrottled } from "./useThrottled.js";
 import SceneShell from "./SceneShell.jsx";
 import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -26,15 +27,26 @@ export default function Lesson6NewtonForces() {
   const [playing, setPlaying] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
-  const [dv, setDv] = useState(20); // a = ΔV/Δt (exemplo: 0 → 20 m/s em 4 s)
-  const [dtA, setDtA] = useState(4);
+  const [dtA, setDtA] = useState(4); // tempo de empurrão (s)
+  const [meas, setMeas] = useState({ v: 0, t: 0, done: false }); // medido na cena
   const fRes = opposite ? f1 - f2 : f1 + f2;
   const accel = mass > 0 ? fRes / mass : 0;
 
   return (
     <div className="lesson__canvas">
       <SceneShell setting="yard" fov={50} cameraPosition={[-0.6, 2.7, 9]} controlsTarget={[-1.2, 1.3, 0]}>
-        <PushedBox key={resetKey} playing={playing} accel={accel} mass={mass} f1={f1} f2={f2} fRes={fRes} opposite={opposite} />
+        <PushedBox
+          key={`${resetKey}-${dtA}-${accel}`}
+          playing={playing}
+          accel={accel}
+          mass={mass}
+          f1={f1}
+          f2={f2}
+          fRes={fRes}
+          opposite={opposite}
+          pushTime={dtA}
+          onMeasure={setMeas}
+        />
       </SceneShell>
 
       <div className="panel">
@@ -84,14 +96,14 @@ export default function Lesson6NewtonForces() {
             { symbol: "F1, F2", name: "forças aplicadas pelas pessoas", unit: "N", color: Q.f1.color },
           ]}
           inputs={[
-            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.1, max: 100000, color: Q.m.color },
-            { key: "f1", symbol: "F1", unit: "N", value: f1, onChange: setF1, min: 0, max: 100000, color: Q.f1.color },
-            { key: "f2", symbol: "F2", unit: "N", value: f2, onChange: setF2, min: 0, max: 100000, color: Q.f2.color },
+            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.001, max: 1e12, color: Q.m.color },
+            { key: "f1", symbol: "F1", unit: "N", value: f1, onChange: setF1, min: 0, max: 1e12, color: Q.f1.color },
+            { key: "f2", symbol: "F2", unit: "N", value: f2, onChange: setF2, min: 0, max: 1e12, color: Q.f2.color },
           ]}
           steps={
             <>
               FRes = {num(f1)} {opposite ? "−" : "+"} {num(f2)} = <b>{num(fRes)} N</b>
-              <br />a = {num(fRes)} ÷ {num(mass)} = <b>{num(accel)} m/s²</b>
+              <br />a = {num(fRes)} ÷ {nump(mass)} = <b>{num(accel)} m/s²</b>
             </>
           }
           note="Use a caixa “Forças em sentidos opostos” acima para subtrair F2."
@@ -108,21 +120,28 @@ export default function Lesson6NewtonForces() {
           formula={<>a = ΔV ÷ Δt</>}
           terms={[
             { symbol: "a", name: "aceleração média", unit: "m/s²", color: Q.a.color },
-            { symbol: "ΔV", name: "variação da velocidade = V final − V inicial", unit: "m/s", color: "#38bdf8" },
-            { symbol: "Δt", name: "intervalo de tempo da mudança", unit: "s", color: "#a78bfa" },
+            { symbol: "ΔV", name: "variação da velocidade = V final − V inicial (medida na cena)", unit: "m/s", color: "#38bdf8" },
+            { symbol: "Δt", name: "tempo que as pessoas empurram o caixote", unit: "s", color: "#a78bfa" },
           ]}
           inputs={[
-            { key: "dv", symbol: "ΔV", unit: "m/s", value: dv, onChange: setDv, min: -100000, max: 100000, color: "#38bdf8" },
-            { key: "dt", symbol: "Δt", unit: "s", value: dtA, onChange: setDtA, min: 0.01, max: 100000, color: "#a78bfa" },
+            { key: "dt", symbol: "Δt", unit: "s", value: dtA, onChange: (v) => { setDtA(v); setPlaying(false); setResetKey((k) => k + 1); }, min: 0.001, max: 1e9, color: "#a78bfa" },
           ]}
           steps={
-            <>
-              a = {num(dv)} ÷ {num(dtA)} = <b>{num(dv / dtA)} m/s²</b>
-            </>
+            meas.t > 0 ? (
+              <>
+                ΔV = {num(meas.v)} − 0 = {num(meas.v)} m/s {meas.done ? "" : `(empurrando… ${num(meas.t, 1)} s)`}
+                <br />a = {num(meas.v)} ÷ {nump(meas.done ? dtA : meas.t)} = <b>{num(meas.done ? meas.v / dtA : accel)} m/s²</b>
+                <br />
+                <span style={{ opacity: 0.8 }}>igual a FRes ÷ m = {num(accel)} m/s² ✓</span>
+              </>
+            ) : (
+              <>Aperte ▶ Aplicar forças: as pessoas empurram durante Δt = {num(dtA)} s e a cena mede ΔV.</>
+            )
           }
           onReset={() => {
-            setDv(20);
             setDtA(4);
+            setPlaying(false);
+            setResetKey((k) => k + 1);
           }}
         />
 
@@ -147,20 +166,40 @@ const LIMIT = 7; // meia largura do caixote
 const SCALE = 1 / 25; // comprimento da seta: 1 unidade a cada 25 N
 const arrowLen = (f) => Math.min(Math.max(Math.abs(f) * SCALE, 0.45), 5);
 
-function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
+// As pessoas empurram durante `pushTime` segundos; depois o caixote segue com a
+// velocidade que ganhou (sem atrito). O deslocamento mostrado é comprimido
+// quando seria grande demais para o galpão, e empurrões longos são acelerados
+// na tela — os valores medidos (v, t) são sempre os reais.
+function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure }) {
   const ref = useRef();
-  const state = useRef({ x: START_X, v: 0 });
+  const state = useRef({ x: 0, v: 0, t: 0, done: false });
+  const report = useThrottled(onMeasure);
+  const travel = 0.5 * Math.abs(accel) * pushTime * pushTime; // quanto anda empurrando (m)
+  const kVis = travel > 7 ? 7 / travel : 1;
+  const rate = pushTime > 8 ? pushTime / 8 : 1;
+  const [pushing, setPushing] = useState(true);
+  // nova montagem (novos valores ou reinício): zera a medição do painel
+  useEffect(() => onMeasure?.({ v: 0, t: 0, done: false }), [onMeasure]);
 
   useFrame((_, delta) => {
     if (!playing) return;
     const s = state.current;
-    s.v += accel * Math.min(delta, 0.05);
-    s.x += s.v * Math.min(delta, 0.05);
-    if (s.x > LIMIT || s.x < -LIMIT) {
-      s.x = Math.sign(s.x) * LIMIT;
-      s.v = 0;
+    const dt = Math.min(delta, 0.05) * rate;
+    if (s.t < pushTime) {
+      const step = Math.min(dt, pushTime - s.t);
+      s.v += accel * step;
+      s.x += s.v * step;
+      s.t += step;
+      if (s.t >= pushTime) {
+        s.done = true;
+        setPushing(false);
+      }
+    } else {
+      s.x += s.v * dt; // segue em movimento uniforme
     }
-    if (ref.current) ref.current.position.x = s.x;
+    const vx = Math.min(LIMIT, Math.max(-LIMIT, START_X + s.x * kVis));
+    if (ref.current) ref.current.position.x = vx;
+    report({ v: s.v, t: s.t, done: s.done }, s.done);
   });
 
   const side2 = opposite ? 1 : -1; // lado do caixote onde fica quem aplica F2
@@ -181,7 +220,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
       />
 
       {/* forças aplicadas no caixote */}
-      {f1 > 0 && (
+      {pushing && f1 > 0 && (
         <Concept id="f1">
           <Arrow3D from={[HALF + 0.08, 0.75, 0.64]} length={arrowLen(f1)} color={Q.f1.color} />
         </Concept>
@@ -189,7 +228,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
       {f1 > 0 && (
         <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) / 2, 1.05, 0.64]} value={`= ${f1} N`} />
       )}
-      {f2 > 0 && (
+      {pushing && f2 > 0 && (
         <Concept id="f2">
           <Arrow3D
             from={opposite ? [-HALF - 0.08, 0.75, 0.64] : [HALF + 0.08, 1.3, 0]}
@@ -210,7 +249,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
           value={`= ${f2} N`}
         />
       )}
-      {fRes !== 0 && (
+      {pushing && fRes !== 0 && (
         <Concept id="fres">
           <Arrow3D from={[0, 2.3, 0]} dir={Math.sign(fRes)} length={arrowLen(fRes)} thickness={1.5} color={Q.fres.color} />
         </Concept>
