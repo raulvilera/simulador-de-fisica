@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import KeepInView from "./KeepInView.jsx";
+import { ViewHeight, HeightBar } from "./ViewHeight.jsx";
 import { useProtected } from "./LabelLayout.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
@@ -16,6 +17,10 @@ import { Readout } from "../components/ui.jsx";
 // sino, de onde Galileu teria soltado as esferas, fica a ~55 m do chão.
 const TOWER_HEIGHT = 9; // unidades da cena
 const TOWER_REAL = 55; // metros
+// alturas (da cena) que a vista pode percorrer: da base ao topo da torre
+const VIEW_MIN = 0.9;
+const VIEW_MAX = 9.6;
+const VIEW_START = 4.3;
 const G = 9.8;
 // Aristóteles: um corpo com o dobro do peso cairia com o dobro da velocidade.
 const WEIGHT_RATIO = 2;
@@ -316,6 +321,7 @@ export default function Lesson1History() {
   const aristotleMode = theory === "aristoteles";
   const [showTheory, setShowTheory] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [viewY, setViewY] = useState(VIEW_START); // altura observada (barra ao lado)
   const [landTime, setLandTime] = useState(null); // { heavy, light } (s)
   const [hC, setHC] = useState(TOWER_REAL); // altura da queda (m)
   const [gC, setGC] = useState(G);
@@ -332,6 +338,7 @@ export default function Lesson1History() {
     setLandTime(null);
     setLive(START);
     setResetKey((k) => k + 1);
+    setViewY(VIEW_START);
   };
   // clicar num cientista: troca a teoria e já repete o experimento com ela
   const pick = (id) => {
@@ -344,6 +351,7 @@ export default function Lesson1History() {
     }, 350);
   };
 
+  const falling = dropping && !landTime; // esferas no ar
   const k = sceneScale(hC);
   const tLight = landTime ? landTime.light : null;
 
@@ -358,7 +366,9 @@ export default function Lesson1History() {
           name="no alto da torre (escala real: 1 pessoa ≈ 0,3 da cena)"
         />
         {/* a câmera acompanha a esfera até o chão */}
-        <KeepInView targets={[followRef]} axes={[0, 1, 0]} />
+        <KeepInView targets={[followRef]} axes={[0, 1, 0]} enabled={falling} />
+        {/* fora da queda, a vista sobe e desce livremente pela torre */}
+        <ViewHeight y={viewY} enabled={!falling} onMove={setViewY} />
         <FallingBalls
           objRef={followRef}
           key={`${resetKey}-${hC}-${gC}-${theory}`}
@@ -430,6 +440,9 @@ export default function Lesson1History() {
           />
         )}
       </SceneShell>
+
+      {/* subir e descer a vista para percorrer a torre, com ou sem o experimento */}
+      <HeightBar value={viewY} min={VIEW_MIN} max={VIEW_MAX} onChange={setViewY} disabled={falling} />
 
       {/* retratos clicáveis: escolhem a teoria simulada */}
       <TheoryPortraits value={theory} onPick={pick} />
