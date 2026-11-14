@@ -12,6 +12,8 @@ body,
 }
 
 body {
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   background: #05070d;
   color: #f1f3fb;

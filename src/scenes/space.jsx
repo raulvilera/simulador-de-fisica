@@ -11,19 +11,7 @@ import { Label3D } from "./primitives.jsx";
 // Painel lateral — mesmo visual/medidas do painel usado nas Aulas 1 a 9.
 export function Panel({ eyebrow, title, children }) {
   return (
-    <div
-      className="panel"
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 340,
-        height: "100%",
-        background: "rgba(10,14,26,0.72)",
-        backdropFilter: "blur(8px)",
-        borderLeft: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
+    <div className="panel">
       <p className="panel__eyebrow">{eyebrow}</p>
       <h1>{title}</h1>
       {children}

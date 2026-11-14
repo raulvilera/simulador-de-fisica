@@ -1,23 +1,48 @@
 .lesson {
+  /* largura do painel lateral (computador/tablet) */
+  --panel-w: 340px;
   height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   background: #05070d;
   color: #f1f3fb;
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.lesson__stage {
+  position: relative;
+  height: 100%;
+  width: 100%;
 }
 
 .lesson__canvas {
   position: relative;
-  height: 100vh;
+  height: 100%;
   width: 100%;
+}
+
+/* Área da cena 3D (SceneShell) */
+.scene-frame {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: var(--panel-w);
+  touch-action: none;
+}
+
+.scene-frame--space {
+  left: calc(var(--panel-w) / -2);
+  right: calc(var(--panel-w) / 2);
 }
 
 .lesson__backBtn {
   position: absolute;
-  top: 18px;
-  left: 18px;
-  z-index: 5;
+  top: calc(14px + env(safe-area-inset-top));
+  left: calc(14px + env(safe-area-inset-left));
+  z-index: 6;
   background: rgba(10, 14, 26, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #f1f3fb;
@@ -26,13 +51,18 @@
   text-decoration: none;
   font-size: 0.85rem;
   backdrop-filter: blur(6px);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lesson__backShort {
+  display: none;
 }
 
 .lesson__badge {
   position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 5;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(var(--panel-w) + 14px);
+  z-index: 6;
   background: rgba(10, 14, 26, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
   padding: 8px 14px;
@@ -40,6 +70,7 @@
   font-size: 0.78rem;
   color: #7dd3fc;
   backdrop-filter: blur(6px);
+  pointer-events: none;
 }
 
 .scene-loading {
@@ -47,13 +78,28 @@
   font-size: 0.9rem;
 }
 
+/* Painel lateral (aulas 1 a 20) */
 .panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100%;
+  z-index: 4;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
-  padding: 58px 22px 40px;
-  background: #0a0e1a;
+  padding: calc(22px + env(safe-area-inset-top)) calc(22px + env(safe-area-inset-right)) 40px 22px;
+  background: rgba(10, 14, 26, 0.72);
+  backdrop-filter: blur(8px);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Alça da gaveta: só aparece no celular em pé */
+.sheetHandle {
+  display: none;
 }
 
 .panel__eyebrow {
@@ -274,4 +320,189 @@
 .labTable th {
   color: #7dd3fc;
   font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   Telas médias (tablet em pé, notebook pequeno): painel um pouco mais estreito */
+@media (max-width: 1024px) and (min-width: 821px) {
+  .lesson {
+    --panel-w: 300px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Celular deitado: painel lateral estreito e compacto */
+@media (max-height: 520px) and (orientation: landscape) {
+  .lesson {
+    --panel-w: min(300px, 42vw);
+  }
+  .panel {
+    padding: calc(12px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 24px 14px;
+  }
+  .panel h1 {
+    font-size: 1.05rem;
+  }
+  .lesson__backBtn {
+    top: 10px;
+    padding: 8px 12px;
+  }
+  .lesson__badge {
+    display: none;
+  }
+  .controls__row > span:first-child {
+    flex: 1 1 auto;
+    max-width: none;
+    white-space: normal;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Celular em pé: cena 3D em cima, painel como gaveta embaixo */
+@media (max-width: 820px) and (orientation: portrait) {
+  .lesson {
+    --panel-w: 0px;
+    --sheet-h: 46dvh;
+  }
+  .lesson--sheet-min {
+    --sheet-h: calc(118px + env(safe-area-inset-bottom));
+  }
+  .lesson--sheet-full {
+    --sheet-h: 84dvh;
+  }
+
+  .scene-frame,
+  .scene-frame--space {
+    left: 0;
+    right: 0;
+    bottom: calc(var(--sheet-h) - 18px);
+    transition: bottom 0.28s ease;
+  }
+
+  .panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: var(--sheet-h);
+    padding: 34px 16px calc(28px + env(safe-area-inset-bottom));
+    background: rgba(10, 14, 26, 0.94);
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+    transition: height 0.28s ease;
+  }
+
+  .lesson--sheet-min .panel {
+    overflow: hidden;
+  }
+
+  .panel h1 {
+    font-size: 1.12rem;
+    margin-bottom: 12px;
+  }
+
+  .sheetHandle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--sheet-h) - 32px);
+    height: 32px;
+    padding-top: 7px;
+    z-index: 5;
+    border: none;
+    background: transparent;
+    color: #8891b5;
+    font-size: 0.66rem;
+    cursor: pointer;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: bottom 0.28s ease;
+  }
+
+  .sheetHandle__bar {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .lesson__backBtn {
+    top: calc(10px + env(safe-area-inset-top));
+    left: 10px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  .lesson__backText {
+    display: none;
+  }
+  .lesson__backShort {
+    display: inline;
+  }
+
+  .lesson__badge {
+    top: calc(10px + env(safe-area-inset-top));
+    right: 10px;
+    padding: 7px 11px;
+    font-size: 0.72rem;
+  }
+  .lesson__badgeMode {
+    display: none;
+  }
+
+  /* controles maiores e fáceis de tocar */
+  .controls {
+    padding: 12px;
+  }
+  .controls__row {
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    min-height: 40px;
+  }
+  .controls__row:has(input[type="checkbox"]) {
+    flex-wrap: nowrap;
+  }
+  /* controle deslizante: rótulo em cima, barra + valor embaixo */
+  .controls__row:has(input[type="range"]) {
+    row-gap: 2px;
+  }
+  .controls__row:has(input[type="range"]) > span:first-child {
+    flex: 1 1 100%;
+    min-width: 0 !important;
+  }
+  .controls__row > span:first-child {
+    flex: 1 1 auto;
+    max-width: none;
+    white-space: normal;
+  }
+  .controls__row input[type="range"] {
+    flex: 1 1 0;
+    height: 28px;
+  }
+  .controls input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    accent-color: #7dd3fc;
+  }
+  .btn {
+    min-height: 46px;
+    font-size: 0.9rem;
+  }
+  .quiz__opt {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+  .readout__value {
+    font-size: 1.15rem;
+  }
+  .labTable {
+    display: block;
+    overflow-x: auto;
+  }
 }

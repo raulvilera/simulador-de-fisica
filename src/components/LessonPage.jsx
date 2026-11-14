@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getLessonBySlug } from "../data/lessons.js";
 import { useAppStore } from "../store/useAppStore.js";
@@ -63,19 +64,67 @@ export default function LessonPage() {
   const SceneComponent = SCENE_BY_TYPE[lesson.sceneType];
 
   return (
-    <div className={`lesson ${mode === "presenter" ? "lesson--presenter" : ""}`}>
-      <div style={{ position: "relative", gridColumn: "1 / -1" }}>
-        <Link to="/" className="lesson__backBtn">
-          ← Todas as aulas
+    <LessonView key={slug} lesson={lesson} mode={mode} SceneComponent={SceneComponent} />
+  );
+}
+
+// Gaveta do painel no celular em pé: "min" (só o título), "half" (metade da tela)
+// e "full" (quase a tela toda). No computador e com o celular deitado o painel
+// continua lateral e a gaveta é ignorada pelo CSS.
+const SHEET_ORDER = ["min", "half", "full"];
+
+function LessonView({ lesson, mode, SceneComponent }) {
+  const [sheet, setSheet] = useState("half");
+  const touchStartY = useRef(null);
+
+  const step = (dir) =>
+    setSheet((s) => SHEET_ORDER[Math.min(2, Math.max(0, SHEET_ORDER.indexOf(s) + dir))]);
+
+  const onTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const onTouchEnd = (e) => {
+    if (touchStartY.current == null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (Math.abs(dy) < 24) return; // foi um toque, não um arrasto: o onClick cuida
+    e.preventDefault();
+    step(dy < 0 ? 1 : -1);
+  };
+  const onClick = () => setSheet((s) => (s === "min" ? "half" : "min"));
+
+  const handleLabel = sheet === "min" ? "Mostrar painel" : "Recolher painel";
+
+  return (
+    <div className={`lesson lesson--sheet-${sheet} ${mode === "presenter" ? "lesson--presenter" : ""}`}>
+      <div className="lesson__stage">
+        <Link to="/" className="lesson__backBtn" aria-label="Voltar para todas as aulas">
+          ← <span className="lesson__backText">Todas as aulas</span>
+          <span className="lesson__backShort">Aulas</span>
         </Link>
         <span className="lesson__badge">
-          Aula {lesson.id} · {mode === "presenter" ? "Apresentação" : "Modo interativo"}
+          Aula {lesson.id}
+          <span className="lesson__badgeMode"> · {mode === "presenter" ? "Apresentação" : "Modo interativo"}</span>
         </span>
         {SceneComponent ? (
           <SceneComponent />
         ) : (
           <div style={{ padding: 40, color: "white" }}>Cena em construção.</div>
         )}
+        <button
+          type="button"
+          className="sheetHandle"
+          aria-label={handleLabel}
+          aria-expanded={sheet !== "min"}
+          onClick={onClick}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          <span className="sheetHandle__bar" />
+          <span className="sheetHandle__text">
+            {sheet === "min" ? "▴ Mostrar painel" : "▾ Recolher · arraste ↕"}
+          </span>
+        </button>
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ export default function Lesson5VelocityMulti() {
         />
       </SceneShell>
 
-      <div className="panel" style={panelOverlayStyle}>
+      <div className="panel">
         <p className="panel__eyebrow">Aula 5 · Velocidade em trechos</p>
         <h1>Percurso com dois trechos</h1>
         <div className="controls">
@@ -99,14 +99,3 @@ function AnimatedCar({ playing, resetKey, t1, t2, splitX }) {
     </group>
   );
 }
-
-const panelOverlayStyle = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 340,
-  height: "100%",
-  background: "rgba(10,14,26,0.72)",
-  backdropFilter: "blur(8px)",
-  borderLeft: "1px solid rgba(255,255,255,0.08)",
-};

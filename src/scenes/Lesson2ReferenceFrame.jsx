@@ -71,7 +71,7 @@ export default function Lesson2ReferenceFrame() {
         <Road playing={playing} frame={frame} />
       </SceneShell>
 
-      <div className="panel" style={panelOverlayStyle}>
+      <div className="panel">
         <p className="panel__eyebrow">Aula 2 · Referencial</p>
         <h1>De quem é o ponto de vista?</h1>
         <div className="controls">
@@ -118,14 +118,3 @@ export default function Lesson2ReferenceFrame() {
     </div>
   );
 }
-
-const panelOverlayStyle = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 340,
-  height: "100%",
-  background: "rgba(10,14,26,0.72)",
-  backdropFilter: "blur(8px)",
-  borderLeft: "1px solid rgba(255,255,255,0.08)",
-};

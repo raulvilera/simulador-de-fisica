@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { lessons, unitOf } from "../data/lessons.js";
 import { useAppStore } from "../store/useAppStore.js";
+import { useInstall } from "../pwa/install.js";
 import "./Hub.css";
 
 const UNITS = [
@@ -11,6 +12,7 @@ const UNITS = [
 export default function Hub() {
   const mode = useAppStore((s) => s.mode);
   const setMode = useAppStore((s) => s.setMode);
+  const { canInstall, showIOSHint, install } = useInstall();
 
   return (
     <div className="hub">
@@ -35,6 +37,18 @@ export default function Hub() {
           </button>
         </div>
       </header>
+
+      {showIOSHint && (
+        <p className="installHint">
+          📲 Para instalar no iPhone/iPad: toque em <strong>Compartilhar</strong> e depois em{" "}
+          <strong>Adicionar à Tela de Início</strong>.
+        </p>
+      )}
+      {canInstall && (
+        <button type="button" className="installBtn" onClick={install}>
+          📲 Instalar app
+        </button>
+      )}
 
       {UNITS.map((unit) => (
         <section key={unit.name} className="hub__unit">
