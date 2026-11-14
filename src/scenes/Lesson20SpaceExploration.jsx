@@ -180,7 +180,7 @@ export default function Lesson20SpaceExploration() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[2, 5, 15]} controlsTarget={[2, 0, 0]} maxDistance={40}>
         {/* a câmera acompanha a nave até o destino */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} margin={0.85} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         <Sun position={[-30, 12, 18]} radius={1.5} />
         <SpinningEarth />
         {m.kind === "orbit" && <Orbiter radius={m.radius} color={m.color} station={m.station} label={m.title} />}

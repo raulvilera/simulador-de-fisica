@@ -53,7 +53,7 @@ export default function Lesson7NewtonForces2() {
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[2, 4.6, 18.5]} controlsTarget={[5.6, 1.4, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         <RulerTrack length={16} start={0} step={niceStep(L / 10) * kTrack} labelOf={(x) => fmtNum(x / kTrack, 1)} />
         <RaceCar
           objRef={followRef}

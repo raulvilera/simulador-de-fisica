@@ -53,7 +53,7 @@ export default function Lesson9LabAcceleration() {
     <div className="lesson__canvas">
       <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.8, 0.8, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         <RulerTrack length={SCENE_LENGTH} start={0} />
         <FrictionCart
           objRef={followRef}

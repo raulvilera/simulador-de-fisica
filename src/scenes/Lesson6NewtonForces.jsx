@@ -38,7 +38,7 @@ export default function Lesson6NewtonForces() {
     <div className="lesson__canvas">
       <SceneShell setting="yard" fov={50} cameraPosition={[-0.6, 2.7, 9]} controlsTarget={[-1.2, 1.3, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         <PushedBox
           objRef={followRef}
           key={`${resetKey}-${dtA}-${accel}`}

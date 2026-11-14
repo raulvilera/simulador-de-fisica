@@ -124,7 +124,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
         <StandingPerson position={OBS} rotationY={Math.PI} />
       </group>
       {/* no referencial da rua, a câmera acompanha os dois carros (e o observador) */}
-      <KeepInView targets={[joaoRef, outroRef, obsRef]} enabled={frame === "solo"} margin={0.78} axes={[1, 0, 0]} />
+      <KeepInView targets={[joaoRef, outroRef, obsRef]} enabled={frame === "solo"} axes={[1, 1, 0]} />
       <QuantityTag
         q={Q.ref}
         position={[OBS[0], PERSON_H + 0.75, OBS[2]]}

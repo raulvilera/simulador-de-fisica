@@ -96,7 +96,7 @@ export default function Lesson19HabitableZone() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 13, 14]} controlsTarget={[0, 0, 0]} maxDistance={40}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} margin={0.85} />
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} edgesOnly margin={0.85} />
         <Sun radius={0.9} />
         {/* zona habitável: faixa entre as órbitas de Vênus e de Marte */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>

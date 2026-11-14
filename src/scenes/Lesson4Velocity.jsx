@@ -38,7 +38,7 @@ export default function Lesson4Velocity() {
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.4, 17]} controlsTarget={[6, 1.4, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         {/* a pista (0 → 13) representa o ΔS digitado: as marcas mostram km */}
         <RulerTrack
           length={14}

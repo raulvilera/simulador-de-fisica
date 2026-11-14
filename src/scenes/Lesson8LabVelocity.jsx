@@ -57,7 +57,7 @@ export default function Lesson8LabVelocity() {
     <div className="lesson__canvas">
       <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.6, 0.8, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         {/* a pista (8 unidades) representa o ΔS digitado: as marcas mostram cm */}
         <RulerTrack
           length={SCENE_LENGTH}
