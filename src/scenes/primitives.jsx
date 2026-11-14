@@ -81,6 +81,8 @@ const WHEEL_RADIUS = 0.34; // no espaço do modelo
 const WHEELS = ["wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"];
 const tmpPos = new THREE.Vector3();
 const tmpScale = new THREE.Vector3();
+const tmpFwd = new THREE.Vector3();
+const lastPos = new THREE.Vector3();
 
 export function Vehicle({ position = [0, 0, 0], color = "#3b82f6", scale = 1, rotationY = 0 }) {
   const gltf = useGLTF(CAR_URL, false);
@@ -128,23 +130,29 @@ export function Vehicle({ position = [0, 0, 0], color = "#3b82f6", scale = 1, ro
     g.parent.getWorldPosition(tmpPos);
     g.parent.getWorldScale(tmpScale);
     g.position.y = -tmpPos.y / (tmpScale.y || 1);
-    // Gira as rodas conforme o deslocamento real ao longo do eixo X.
+    // Gira as rodas conforme o deslocamento real, medido na direção para onde
+    // o carro aponta (assim a roda gira certo também quando ele dá meia-volta).
     g.getWorldPosition(tmpPos);
     g.getWorldScale(tmpScale);
-    if (last.current != null) {
-      const d = tmpPos.x - last.current;
+    if (last.current) {
+      tmpFwd.set(1, 0, 0).transformDirection(g.matrixWorld);
+      const d = lastPos.copy(tmpPos).sub(last.current).dot(tmpFwd);
       if (Math.abs(d) < 3) {
+        // a frente do modelo é −Z: rodar para a frente = ângulo negativo em X
         const angle = d / (WHEEL_RADIUS * (tmpScale.x || 1));
-        for (const w of wheels) w.rotation.x += angle * Math.cos(rotationY);
+        for (const w of wheels) w.rotation.x -= angle;
       }
+      last.current.copy(tmpPos);
+    } else {
+      last.current = tmpPos.clone();
     }
-    last.current = tmpPos.x;
   });
 
   return (
     <group ref={outer} position={[position[0], 0, position[2]]} scale={scale * CAR_SCALE} rotation={[0, rotationY, 0]}>
-      {/* o modelo "olha" para +Z; giramos para andar no sentido +X */}
-      <group rotation={[0, Math.PI / 2, 0]}>
+      {/* a frente do modelo aponta para −Z (rodas dianteiras em z < 0);
+          giramos −90° para o carro andar de frente no sentido +X */}
+      <group rotation={[0, -Math.PI / 2, 0]}>
         <primitive object={model} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]} renderOrder={2}>
           <planeGeometry args={[0.655 * 4, 1.3 * 4]} />
@@ -166,23 +174,113 @@ export function Ball({ position = [0, 1, 0], color = "#f87171", radius = 0.3 }) 
   );
 }
 
-// Seta 3D para representar vetores de força / velocidade / aceleração
-export function Arrow3D({ from = [0, 0.5, 0], length = 1, color = "#f59e0b", label }) {
+// Seta 3D para representar vetores de força / velocidade / aceleração.
+// `dir` = 1 aponta para +X, `dir` = −1 aponta para −X (o rótulo nunca espelha).
+export function Arrow3D({ from = [0, 0.5, 0], length = 1, color = "#f59e0b", label, dir = 1, thickness = 1 }) {
   return (
     <group position={from}>
-      <mesh position={[(length - 0.3) / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.055, 0.055, Math.max(length - 0.3, 0.01), 16]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} metalness={0.3} roughness={0.35} />
-      </mesh>
-      <mesh position={[length - 0.15, 0, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
-        <coneGeometry args={[0.15, 0.3, 20]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} metalness={0.3} roughness={0.35} />
-      </mesh>
+      <group rotation={[0, dir < 0 ? Math.PI : 0, 0]}>
+        <mesh position={[(length - 0.3) / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.055 * thickness, 0.055 * thickness, Math.max(length - 0.3, 0.01), 16]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} metalness={0.3} roughness={0.35} />
+        </mesh>
+        <mesh position={[length - 0.15, 0, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
+          <coneGeometry args={[0.15 * thickness, 0.3, 20]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} metalness={0.3} roughness={0.35} />
+        </mesh>
+      </group>
       {label && (
-        <Label3D position={[length / 2, 0.42, 0]} fontSize={0.27} color={color} anchorX="center">
+        <Label3D position={[(dir * length) / 2, 0.36, 0]} fontSize={0.27} color={color} anchorX="center">
           {label}
         </Label3D>
       )}
+    </group>
+  );
+}
+
+// Pessoa estilizada empurrando algo à sua frente (aulas de força). Fica virada
+// para +X (`dir` = 1) ou −X (`dir` = −1); as pernas dão passos de acordo com o
+// quanto ela realmente se deslocou na cena, para a frente ou para trás.
+const HIP_Y = 0.84;
+const LEG = 0.88;
+function limb(from, to) {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  return {
+    position: [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, from[2]],
+    rotation: [0, 0, Math.atan2(-dx, dy)],
+    length: Math.hypot(dx, dy),
+  };
+}
+export function Pusher({ position = [0, 0, 0], dir = 1, shirt = "#3b82f6", skin = "#c98d63", hair = "#2a1d14", pants = "#27324a", reach = 0.62 }) {
+  const root = useRef();
+  const legs = useRef([]);
+  const last = useRef(null);
+  const phase = useRef(0);
+
+  useFrame(() => {
+    const g = root.current;
+    if (!g) return;
+    g.getWorldPosition(tmpPos);
+    if (last.current != null) {
+      const d = (tmpPos.x - last.current) * dir;
+      if (Math.abs(d) < 3) phase.current += d * 3.6;
+    }
+    last.current = tmpPos.x;
+    legs.current.forEach((leg, i) => {
+      if (leg) leg.rotation.z = -0.32 + Math.sin(phase.current + i * Math.PI) * 0.42;
+    });
+  });
+
+  // tronco inclinado para a frente; mãos apoiadas a `reach` metros dos quadris
+  const shoulder = [0.27, HIP_Y + 0.5];
+  const hand = [reach, 0.82];
+  const torso = limb([0, HIP_Y, 0], [shoulder[0], shoulder[1], 0]);
+  return (
+    <group ref={root} position={position} rotation={[0, dir < 0 ? Math.PI : 0, 0]}>
+      {[-0.11, 0.11].map((z, i) => (
+        <group key={z} ref={(el) => void (legs.current[i] = el)} position={[0, HIP_Y, z]}>
+          <mesh position={[0, -LEG / 2, 0]} castShadow>
+            <capsuleGeometry args={[0.075, LEG - 0.15, 4, 10]} />
+            <meshLambertMaterial color={pants} />
+          </mesh>
+          <mesh position={[0.06, -LEG + 0.02, 0]}>
+            <boxGeometry args={[0.27, 0.1, 0.12]} />
+            <meshLambertMaterial color="#1b1b1f" />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={torso.position} rotation={torso.rotation} castShadow>
+        <capsuleGeometry args={[0.17, torso.length - 0.16, 4, 12]} />
+        <meshLambertMaterial color={shirt} />
+      </mesh>
+      {[-0.2, 0.2].map((z) => {
+        const arm = limb([shoulder[0], shoulder[1] - 0.04, z], [hand[0], hand[1], z]);
+        return (
+          <group key={z}>
+            <mesh position={arm.position} rotation={arm.rotation}>
+              <capsuleGeometry args={[0.052, arm.length - 0.1, 4, 8]} />
+              <meshLambertMaterial color={skin} />
+            </mesh>
+            <mesh position={[shoulder[0] + 0.03, shoulder[1] - 0.06, z]}>
+              <sphereGeometry args={[0.085, 10, 8]} />
+              <meshLambertMaterial color={shirt} />
+            </mesh>
+            <mesh position={[hand[0], hand[1], z]}>
+              <sphereGeometry args={[0.062, 10, 8]} />
+              <meshLambertMaterial color={skin} />
+            </mesh>
+          </group>
+        );
+      })}
+      <mesh position={[shoulder[0] + 0.13, shoulder[1] + 0.2, 0]} castShadow>
+        <sphereGeometry args={[0.125, 16, 12]} />
+        <meshLambertMaterial color={skin} />
+      </mesh>
+      <mesh position={[shoulder[0] + 0.11, shoulder[1] + 0.225, 0]} rotation={[0, 0, 0.5]}>
+        <sphereGeometry args={[0.132, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshLambertMaterial color={hair} />
+      </mesh>
     </group>
   );
 }

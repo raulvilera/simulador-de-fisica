@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
@@ -11,6 +11,9 @@ function Road({ playing, frame }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls);
+  const followed = useRef(0);
 
   useFrame((_, delta) => {
     if (playing) {
@@ -20,18 +23,25 @@ function Road({ playing, frame }) {
       if (x.current.outro > 16) x.current.outro = -16;
     }
 
-    // Referencial do solo: posições absolutas.
-    // Referencial do carro de João: tudo se desloca relativo à posição de João,
-    // e o próprio carro de João fica parado no centro da cena.
-    const offset = frame === "joao" ? x.current.joao : 0;
+    if (joaoRef.current) joaoRef.current.position.x = x.current.joao;
+    if (outroRef.current) outroRef.current.position.x = x.current.outro;
 
-    if (joaoRef.current) joaoRef.current.position.x = x.current.joao - offset;
-    if (outroRef.current) outroRef.current.position.x = x.current.outro - offset;
+    // Referencial do solo: a câmera fica parada na beira da pista.
+    // Referencial do carro de João: a câmera viaja junto com o João. Ele fica
+    // parado no centro da tela e é a pista (com as marcas e as zebras) que
+    // passa para trás — como quem olha de dentro do carro.
+    const follow = frame === "joao" ? x.current.joao : 0;
+    const shift = follow - followed.current;
+    if (shift !== 0) {
+      camera.position.x += shift;
+      if (controls) controls.target.x += shift;
+      followed.current = follow;
+    }
   });
 
   return (
     <>
-      <RulerTrack length={32} start={-16} z={0} />
+      <RulerTrack length={60} start={-30} step={2} z={0} />
       <group ref={joaoRef} position={[0, 0.3, -0.62]}>
         <Vehicle color="#3b82f6" />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#93c5fd">
@@ -57,7 +67,7 @@ export default function Lesson2ReferenceFrame() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell fov={54} cameraPosition={[-1.5, 3.4, 12.5]} controlsTarget={[0, 0, 0]}>
+      <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]}>
         <Road playing={playing} frame={frame} />
       </SceneShell>
 

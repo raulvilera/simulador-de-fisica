@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import { useMarbleTexture } from "./settings.jsx";
 import { Ball, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 
@@ -78,16 +79,25 @@ function Tower() {
     mesh.castShadow = true;
     return mesh;
   }, []);
+  // Mármore com faixas e arcadas (o mesmo da Catedral ao lado).
+  const stone = useMarbleTexture();
+  const [baseMap, coreMap] = useMemo(() => {
+    const base = stone.clone();
+    base.repeat.set(4, 1);
+    const core = stone.clone();
+    core.repeat.set(5, LEVELS);
+    return [base, core];
+  }, [stone]);
   const marble = <meshStandardMaterial color="#e7e1d3" roughness={0.62} metalness={0.02} />;
   return (
     <group position={[0, 0, -1.9]} rotation={[0.07, 0, 0]}>
       <mesh position={[0, 0.75, 0]} castShadow>
         <cylinderGeometry args={[1.26, 1.32, 1.5, 40]} />
-        {marble}
+        <meshStandardMaterial map={baseMap} roughness={0.62} metalness={0.02} />
       </mesh>
       <mesh position={[0, 1.5 + LEVELS / 2, 0]} castShadow>
         <cylinderGeometry args={[0.98, 0.98, LEVELS, 40]} />
-        <meshStandardMaterial color="#cfc8b8" roughness={0.75} />
+        <meshStandardMaterial map={coreMap} color="#d9d3c6" roughness={0.75} />
       </mesh>
       {Array.from({ length: LEVELS + 1 }, (_, l) => (
         <mesh key={l} position={[0, 1.5 + l, 0]} castShadow>
@@ -98,7 +108,7 @@ function Tower() {
       <primitive object={columns} />
       <mesh position={[0, 1.5 + LEVELS + 0.62, 0]} castShadow>
         <cylinderGeometry args={[0.86, 0.9, 1.24, 32]} />
-        {marble}
+        <meshStandardMaterial map={baseMap} roughness={0.62} metalness={0.02} />
       </mesh>
       <mesh position={[0, 1.5 + LEVELS + 1.28, 0]} castShadow>
         <cylinderGeometry args={[0.95, 0.95, 0.08, 32]} />
@@ -126,7 +136,7 @@ export default function Lesson1History() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
+      <SceneShell setting="pisa" cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
         <Tower />
         <FallingBalls key={resetKey} dropping={dropping} aristotleMode={aristotleMode} onLanded={setLandTime} />
       </SceneShell>

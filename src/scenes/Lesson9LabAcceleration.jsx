@@ -30,7 +30,7 @@ export default function Lesson9LabAcceleration() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[2, 2.4, 8.5]} controlsTarget={[4.2, 0.2, 0]}>
+      <SceneShell setting="lab" cameraPosition={[2, 2.4, 8.5]} controlsTarget={[4.2, 0.2, 0]}>
         <RulerTrack length={SCENE_LENGTH} start={0} />
         <FrictionCart
           running={running}

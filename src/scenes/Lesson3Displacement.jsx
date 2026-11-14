@@ -11,6 +11,7 @@ const SPEED = 2.5; // m/s
 
 function Walker({ playing, resetKey, onUpdate }) {
   const ref = useRef();
+  const turnRef = useRef();
   const legIndex = useRef(0);
   const pos = useRef(PATH[0]);
   const distance = useRef(0);
@@ -20,6 +21,15 @@ function Walker({ playing, resetKey, onUpdate }) {
     if (!playing || legIndex.current >= PATH.length - 1) return;
     const target = PATH[legIndex.current + 1];
     const dir = target > pos.current ? 1 : -1;
+
+    // Antes de voltar, o carro faz a meia-volta: ele sempre anda de frente.
+    const heading = dir > 0 ? 0 : Math.PI;
+    const turn = turnRef.current;
+    if (turn && Math.abs(turn.rotation.y - heading) > 0.001) {
+      const d = heading - turn.rotation.y;
+      turn.rotation.y += Math.sign(d) * Math.min(Math.abs(d), 3.5 * delta);
+      return;
+    }
     const step = SPEED * delta * dir;
     const prev = pos.current;
 
@@ -47,7 +57,9 @@ function Walker({ playing, resetKey, onUpdate }) {
 
   return (
     <group key={resetKey} ref={ref} position={[PATH[0], 0.3, 0]}>
-      <Vehicle color="#8b5cf6" />
+      <group ref={turnRef}>
+        <Vehicle color="#8b5cf6" />
+      </group>
     </group>
   );
 }
