@@ -4,7 +4,7 @@ import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
-import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y } from "./observer.jsx";
+import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
@@ -26,7 +26,7 @@ const Q = {
 const OBS = [0, 0, 2.9];
 const LANE_J = -0.62; // faixa do João
 const LANE_O = 0.62; // faixa do outro carro
-const CAR_Y = 0.75; // altura do "centro" do carro para a linha de visada
+const CAR_Y = 0.3; // altura do "centro" do carro para a linha de visada
 const sgn = (v) => (v >= 0 ? "+" : "−") + f1(Math.abs(v));
 const Q_LIST = Object.values(Q);
 
@@ -40,7 +40,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
   const [angJ, setAngJ] = useState(null);
   const [angO, setAngO] = useState(null);
   // olho de quem observa: a pessoa (solo) ou o João dentro do carro
-  const eye = () => (frame === "solo" ? [OBS[0], EYE_Y, OBS[2]] : [x.current.joao, 1.05, LANE_J]);
+  const eye = () => (frame === "solo" ? [OBS[0], EYE_Y, OBS[2]] : [x.current.joao, 0.5, LANE_J]);
   const origin = () => (frame === "solo" ? OBS : [x.current.joao, 0, LANE_J]);
 
   useFrame((_, delta) => {
@@ -104,7 +104,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
       <StandingPerson position={OBS} rotationY={Math.PI} />
       <QuantityTag
         q={Q.ref}
-        position={[OBS[0], 2.35, OBS[2]]}
+        position={[OBS[0], PERSON_H + 0.75, OBS[2]]}
         symbol={frame === "solo" ? "Observador (referencial)" : "Observador na rua"}
         value={frame === "solo" ? "x = 0" : undefined}
         name={frame === "solo" ? "pessoa parada: origem das posições" : "agora o referencial é o João"}
@@ -146,7 +146,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
           id="ang"
           position={
             frame === "solo"
-              ? [angO.mid[0], 1.05, angO.mid[2]]
+              ? [angO.mid[0], 0.75, angO.mid[2]]
               : [x.current.joao + 2.4, 0.4, (LANE_J + LANE_O) / 2 + 1.4]
           }
           color="#f87171"
