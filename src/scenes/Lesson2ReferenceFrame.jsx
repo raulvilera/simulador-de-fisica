@@ -3,7 +3,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Pin, Concept, Term } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
+import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
@@ -17,7 +18,16 @@ const Q = {
   vj: { id: "vj", symbol: "v João", name: "velocidade de João", color: "#60a5fa" },
   vo: { id: "vo", symbol: "v outro", name: "velocidade do outro carro", color: "#f87171" },
   traj: { id: "traj", symbol: "Trajetória", name: "caminho seguido pelos carros", color: "#4ade80" },
+  ang: { id: "ang", symbol: "θ", name: "ângulo de visão em relação ao sentido do movimento", color: "#e5e9f5" },
 };
+
+// Observador (pessoa) parado na calçada do lado da câmera, de costas para nós e
+// olhando para a pista — vemos o que ele vê.
+const OBS = [0, 0, 2.9];
+const LANE_J = -0.62; // faixa do João
+const LANE_O = 0.62; // faixa do outro carro
+const CAR_Y = 0.75; // altura do "centro" do carro para a linha de visada
+const sgn = (v) => (v >= 0 ? "+" : "−") + f1(Math.abs(v));
 const Q_LIST = Object.values(Q);
 
 function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
@@ -27,6 +37,11 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const followed = useRef(0);
+  const [angJ, setAngJ] = useState(null);
+  const [angO, setAngO] = useState(null);
+  // olho de quem observa: a pessoa (solo) ou o João dentro do carro
+  const eye = () => (frame === "solo" ? [OBS[0], EYE_Y, OBS[2]] : [x.current.joao, 1.05, LANE_J]);
+  const origin = () => (frame === "solo" ? OBS : [x.current.joao, 0, LANE_J]);
 
   useFrame((_, delta) => {
     if (playing) {
@@ -85,13 +100,60 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
           name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
         />
       </group>
-      {frame === "solo" && (
-        <>
-          <Concept id="ref">
-            <Pin x={0} z={2.2} height={1.6} color={Q.ref.color} />
-          </Concept>
-          <QuantityTag q={Q.ref} position={[0, 2.0, 2.2]} value="solo (rua)" name="observador parado na beira da pista" />
-        </>
+      {/* observador: uma pessoa parada na beira da pista */}
+      <StandingPerson position={OBS} rotationY={Math.PI} />
+      <QuantityTag
+        q={Q.ref}
+        position={[OBS[0], 2.35, OBS[2]]}
+        symbol={frame === "solo" ? "Observador (referencial)" : "Observador na rua"}
+        value={frame === "solo" ? "x = 0" : undefined}
+        name={frame === "solo" ? "pessoa parada: origem das posições" : "agora o referencial é o João"}
+      />
+
+      {/* eixo de referência (sentido +x do movimento) e ângulos de visão */}
+      <Concept id="ang">
+        <ReferenceAxis getOrigin={origin} color={Q.ref.color} />
+        {frame === "solo" && (
+          <SightAngle
+            getEye={eye}
+            getTarget={() => [x.current.joao, CAR_Y, LANE_J]}
+            color="#60a5fa"
+            radius={1.2}
+            onAngle={setAngJ}
+          />
+        )}
+        <SightAngle
+          key={frame}
+          getEye={eye}
+          getTarget={() => [x.current.outro, CAR_Y, LANE_O]}
+          color="#f87171"
+          radius={frame === "solo" ? 1.8 : 1.5}
+          onAngle={setAngO}
+        />
+      </Concept>
+      {frame === "solo" && angJ && (
+        <QuantityTag
+          id="ang"
+          position={angJ.mid}
+          color="#60a5fa"
+          symbol="θ João"
+          value={`= ${Math.round(angJ.deg)}°`}
+          name={`x = ${sgn(angJ.dx)} m do observador`}
+        />
+      )}
+      {angO && (
+        <QuantityTag
+          id="ang"
+          position={
+            frame === "solo"
+              ? [angO.mid[0], 1.05, angO.mid[2]]
+              : [x.current.joao + 2.4, 0.4, (LANE_J + LANE_O) / 2 + 1.4]
+          }
+          color="#f87171"
+          symbol="θ outro"
+          value={`= ${Math.round(angO.deg)}°`}
+          name={`x = ${sgn(angO.dx)} m ${frame === "solo" ? "do observador" : "do João"}`}
+        />
       )}
       <QuantityTag q={Q.traj} position={[-7, 0.45, 1.6]} value="reta" name="caminho seguido pelos carros" />
     </>
@@ -183,6 +245,31 @@ export default function Lesson2ReferenceFrame() {
             setVO(EX_OUTRO);
           }}
         />
+
+        <section className="panel__section fcard">
+          <h3>Ângulo de visão do observador</h3>
+          <div className="fcard__formula">θ = ângulo entre a linha de visada e o sentido do movimento (+x)</div>
+          <ul className="fcard__terms">
+            <li>
+              <b style={{ color: Q.ref.color }}>O</b>
+              <span>observador (pessoa parada na rua): é a origem, x = 0. Linha amarela: sentido +x do movimento.</span>
+            </li>
+            <li>
+              <b style={{ color: "#60a5fa" }}>θ</b>
+              <span>
+                θ &lt; 90°: o carro está à frente (x &gt; 0); θ = 90°: bem diante do observador; θ &gt; 90°: ainda não
+                passou (x &lt; 0). Com os carros andando, o ângulo muda o tempo todo.
+              </span>
+            </li>
+            <li>
+              <b style={{ color: "#f87171" }}>João</b>
+              <span>
+                no referencial “Carro do João”, quem observa é o João: ele se vê parado e mede o ângulo até o outro
+                carro, que muda mais devagar (velocidade relativa).
+              </span>
+            </li>
+          </ul>
+        </section>
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
