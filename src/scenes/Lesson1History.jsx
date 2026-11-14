@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 import { Readout } from "../components/ui.jsx";
@@ -18,6 +19,7 @@ const Q = {
   g: { id: "g", symbol: "g", name: "aceleração da gravidade", color: "#fbbf24" },
   ar: { id: "ar", symbol: "ar", name: "resistência do ar", color: "#7dd3fc" },
   t: { id: "t", symbol: "t", name: "tempo de queda", color: "#4ade80" },
+  vq: { id: "vq", symbol: "v", name: "velocidade da esfera durante a queda", color: "#38bdf8" },
 };
 const Q_LIST = Object.values(Q);
 
@@ -28,11 +30,12 @@ const sceneScale = (h) => (h <= TOWER_HEIGHT ? 1 : TOWER_HEIGHT / h);
 // curtas, desaceleradas (mínimo ~0,8 s), para dar para ver. O tempo medido é o real.
 const playRate = (T) => (T > 6 ? T / 6 : T < 0.8 ? T / 0.8 : 1);
 
-function FallingBalls({ dropping, aristotleMode, onLanded, h, g }) {
+function FallingBalls({ dropping, aristotleMode, onLanded, onTick, h, g, live }) {
   const heavyRef = useRef();
   const lightRef = useRef();
   const t = useRef(0);
   const landed = useRef(false);
+  const tick = useThrottled(onTick, 90);
 
   useFrame((_, delta) => {
     if (!dropping || landed.current) return;
@@ -52,6 +55,10 @@ function FallingBalls({ dropping, aristotleMode, onLanded, h, g }) {
     if (heavyRef.current) heavyRef.current.position.y = Math.max(yHeavy, 0.3);
     if (lightRef.current) lightRef.current.position.y = Math.max(yLight, 0.3);
 
+    // valores do instante atual (esfera leve = modelo de Galileu)
+    const fall = Math.min(0.5 * g * t.current ** 2, h);
+    tick({ t: t.current, v: g * t.current, fall, y: h - fall }, t.current >= T);
+
     if (t.current >= T) {
       landed.current = true;
       onLanded?.(T.toFixed(2));
@@ -67,6 +74,16 @@ function FallingBalls({ dropping, aristotleMode, onLanded, h, g }) {
       <group ref={lightRef} position={[0.6, Math.max(h * sceneScale(h), 0.3), 0]}>
         <Ball position={[0, 0, 0]} color="#38bdf8" radius={0.22} />
         <QuantityTag id="m" position={[1.1, 0.35, 0]} color="#38bdf8" symbol="m menor" name="esfera leve" />
+        {live && live.t > 0 && (
+          <QuantityTag
+            id="vq"
+            position={[1.25, -0.45, 0]}
+            color="#38bdf8"
+            symbol="v"
+            value={`= g·t = ${num(live.v, 1)} m/s`}
+            name={`altura: ${num(live.y, 1)} m`}
+          />
+        )}
       </group>
     </>
   );
@@ -142,14 +159,18 @@ export default function Lesson1History() {
   const [landTime, setLandTime] = useState(null);
   const [hC, setHC] = useState(TOWER_HEIGHT); // calculadora de queda livre
   const [gC, setGC] = useState(G);
+  const START = { t: 0, v: 0, fall: 0, y: null };
+  const [live, setLive] = useState(START); // valores durante a queda
 
   const drop = () => {
     setLandTime(null);
+    setLive(START);
     setDropping(true);
   };
   const reset = () => {
     setDropping(false);
     setLandTime(null);
+    setLive(START);
     setResetKey((k) => k + 1);
   };
 
@@ -162,6 +183,8 @@ export default function Lesson1History() {
           dropping={dropping}
           aristotleMode={aristotleMode}
           onLanded={setLandTime}
+          onTick={setLive}
+          live={live}
           h={hC}
           g={gC}
         />
@@ -197,6 +220,9 @@ export default function Lesson1History() {
           name="sem ar, pena e martelo caem juntos"
         />
 
+        {!landTime && live.t > 0 && (
+          <QuantityTag q={Q.t} position={[0, 1.4, 1.4]} value={`= ${num(live.t)} s`} name="cronômetro da queda (tempo real)" />
+        )}
         {landTime && (
           <QuantityTag
             q={Q.t}
@@ -251,6 +277,17 @@ export default function Lesson1History() {
               t = √(2 × {nump(hC)} ÷ {nump(gC)}) = <b>{num(Math.sqrt((2 * hC) / gC))} s</b>
               <br />o mesmo tempo para a esfera pesada e para a leve
             </>
+          }
+          live={
+            live.t > 0 ? (
+              <>
+                t = <b>{num(live.t)} s</b>
+                <br />v = g · t = {num(gC)} × {nump(live.t)} = <b>{num(live.v, 1)} m/s</b>
+                <br />já caiu: ½ · g · t² = <b>{num(live.fall, 1)} m</b> · falta: {num(Math.max(live.y, 0), 1)} m
+              </>
+            ) : (
+              <>Aperte ▶ Soltar as esferas para ver t, v e a altura mudarem durante a queda.</>
+            )
           }
           note="A animação usa h e g digitados (acima de 9 m a torre fica fora de escala; quedas longas são aceleradas e o tempo mostrado é o real). Experimente g = 1,6 (Lua)."
           onReset={() => {

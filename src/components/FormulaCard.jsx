@@ -78,8 +78,9 @@ export function NumberField({ value, onChange, min, max, unit, label, color }) {
  *  steps    – JSX/texto com a conta substituída (ex.: "ΔS = 6 − 0 = 6 m")
  *  onReset  – volta para os valores do exemplo
  *  note     – observação opcional (ex.: limites da cena)
+ *  live     – conta com os valores do instante atual (muda durante o movimento)
  */
-export default function FormulaCard({ title, formula, terms = [], inputs = [], steps, onReset, note }) {
+export default function FormulaCard({ title, formula, terms = [], inputs = [], steps, live, onReset, note }) {
   return (
     <section className="panel__section fcard">
       <h3>{title}</h3>
@@ -123,6 +124,12 @@ export default function FormulaCard({ title, formula, terms = [], inputs = [], s
       )}
 
       {steps && <div className="fcard__steps">{steps}</div>}
+      {live && (
+        <div className="fcard__live" aria-live="off">
+          <p className="fcard__liveHead">⏱ Durante o movimento</p>
+          {live}
+        </div>
+      )}
       {note && <p className="fcard__note">{note}</p>}
       {onReset && (
         <button type="button" className="btn btn--ghost fcard__reset" onClick={onReset}>

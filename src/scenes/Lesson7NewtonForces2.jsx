@@ -84,7 +84,12 @@ export default function Lesson7NewtonForces2() {
           )}
           <QuantityTag q={Q.fres} position={[-0.2 + (Math.sign(fRes || 1) * aLen(fRes)) / 2, 2.2, 0]} value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`} />
           <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
-          <QuantityTag q={Q.v} position={[0, 0, 2.7]} value={`= ${live.v.toFixed(1).replace(".", ",")} m/s`} />
+          <QuantityTag
+            q={Q.v}
+            position={[0, 0, 2.7]}
+            value={`= ${num(live.v, 1)} m/s (${num(live.v * 3.6, 0)} km/h)`}
+            name={live.t > 0 ? `t = ${num(live.t, 1)} s · andou ${num(live.x, 1)} m` : "velocidade (muda com a aceleração)"}
+          />
         </RaceCar>
       </SceneShell>
 
@@ -144,6 +149,18 @@ export default function Lesson7NewtonForces2() {
               {moving && fRes < 0 && <span style={{ color: "#fca5a5" }}> (resultante para trás: o carro freia)</span>}
               <br />a = {num(fRes)} ÷ {nump(mass)} = <b>{num(accel)} m/s²</b>
             </>
+          }
+          live={
+            live.t > 0 ? (
+              <>
+                t = <b>{num(live.t)} s</b>
+                <br />v = v₀ + a · t = {num(v0)} + {nump(accel)} × {nump(live.t)} = <b>{num(live.v, 1)} m/s</b> (
+                {num(live.v * 3.6, 0)} km/h)
+                <br />distância = <b>{num(live.x, 1)} m</b>
+              </>
+            ) : (
+              <>Aperte ▶ Acelerar: t, v e a distância mudam enquanto o carro anda.</>
+            )
           }
           onReset={() => {
             setMass(800);

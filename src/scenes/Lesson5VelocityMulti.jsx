@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
@@ -30,6 +31,12 @@ export default function Lesson5VelocityMulti() {
   const vMediaTotal = (d1 + d2) / (t1 + t2);
   const vMediaErrada = (v1 + v2) / 2;
 
+  // valores do instante atual
+  const [now, setNow] = useState({ tH: 0, x: 0 });
+  const inLeg1 = now.tH <= t1;
+  const dNow = inLeg1 ? v1 * now.tH : Math.min(d1 + v2 * (now.tH - t1), d1 + d2);
+  const vNow = now.tH >= t1 + t2 ? 0 : inLeg1 ? v1 : v2;
+
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.8, 18]} controlsTarget={[6, 1.8, 0]}>
@@ -48,7 +55,19 @@ export default function Lesson5VelocityMulti() {
           t1={t1}
           t2={t2}
           splitX={(14 * d1) / (d1 + d2)}
-        />
+          onTick={setNow}
+        >
+          {now.tH > 0 && (
+            <QuantityTag
+              id="agora"
+              position={[0, 1.5, 0]}
+              color={inLeg1 ? Q.t1.color : Q.t2.color}
+              symbol={now.tH >= t1 + t2 ? "chegou" : inLeg1 ? "trecho 1" : "trecho 2"}
+              value={`v = ${num(vNow, 1)} km/h`}
+              name={`t = ${num(now.tH)} h · ΔS = ${num(dNow, 1)} km`}
+            />
+          )}
+        </AnimatedCar>
 
         <Concept id="t1">
           <SpanArrow getFrom={() => 0} getTo={() => (14 * d1) / (d1 + d2)} y={2.2} color={Q.t1.color} />
@@ -95,6 +114,7 @@ export default function Lesson5VelocityMulti() {
               className="btn btn--ghost"
               onClick={() => {
                 setPlaying(false);
+                setNow({ tH: 0, x: 0 });
                 setResetKey((k) => k + 1);
               }}
             >
@@ -140,6 +160,17 @@ export default function Lesson5VelocityMulti() {
               </span>
             </>
           }
+          live={
+            now.tH > 0 ? (
+              <>
+                {inLeg1 ? "Trecho 1" : now.tH >= t1 + t2 ? "Fim do percurso" : "Trecho 2"}: t = <b>{num(now.tH)} h</b> · ΔS ={" "}
+                <b>{num(dNow, 1)} km</b>
+                <br />v média até agora = {num(dNow, 1)} ÷ {nump(now.tH)} = <b>{num(dNow / now.tH, 1)} km/h</b>
+              </>
+            ) : (
+              <>Aperte ▶ Simular percurso: o tempo, a distância e a velocidade média mudam durante a viagem.</>
+            )
+          }
           onReset={() => {
             setD1(60);
             setV1(20);
@@ -159,14 +190,16 @@ export default function Lesson5VelocityMulti() {
   );
 }
 
-function AnimatedCar({ playing, resetKey, t1, t2, splitX }) {
+function AnimatedCar({ playing, resetKey, t1, t2, splitX, onTick, children }) {
   const ref = useRef();
   const clock = useRef(0);
+  const tick = useThrottled(onTick, 100);
+  const sent = useRef(false);
   // o percurso todo dura ~8 s na tela, mantendo a proporção entre t₁ e t₂
   const SCALE = 8 / (t1 + t2);
 
   useFrame((_, delta) => {
-    if (!playing) return;
+    if (!playing || sent.current) return;
     clock.current += delta;
     const simT1 = t1 * SCALE;
     const simT2 = t2 * SCALE;
@@ -179,11 +212,16 @@ function AnimatedCar({ playing, resetKey, t1, t2, splitX }) {
       x = 14;
     }
     if (ref.current) ref.current.position.x = x;
+    // tempo do problema (h) desde a partida
+    const end = clock.current >= (t1 + t2) * SCALE;
+    if (end) sent.current = true;
+    tick({ tH: Math.min(clock.current / SCALE, t1 + t2), x }, end);
   });
 
   return (
     <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
       <Vehicle color="#22c55e" />
+      {children}
     </group>
   );
 }
