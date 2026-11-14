@@ -346,7 +346,7 @@ export default function Lesson1History() {
           name="no alto da torre (escala real: 1 pessoa ≈ 0,3 da cena)"
         />
         {/* a câmera acompanha a esfera até o chão */}
-        <KeepInView targets={[followRef]} axes={[0, 1, 0]} margin={0.8} />
+        <KeepInView targets={[followRef]} axes={[0, 1, 0]} />
         <FallingBalls
           objRef={followRef}
           key={`${resetKey}-${hC}-${gC}-${theory}`}

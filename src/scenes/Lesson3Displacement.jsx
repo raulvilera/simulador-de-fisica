@@ -142,7 +142,7 @@ export default function Lesson3Displacement() {
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.6, 18]} controlsTarget={[5.8, 1.4, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         <RulerTrack length={TRACK} start={0} step={fit.stepScene} highlight={SP} labelOf={fit.label} />
 
         <Walker

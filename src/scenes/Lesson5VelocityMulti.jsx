@@ -43,7 +43,7 @@ export default function Lesson5VelocityMulti() {
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.8, 18]} controlsTarget={[6, 1.8, 0]}>
         {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
-        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <KeepInView targets={[followRef]} axes={[1, 1, 1]} />
         {/* a pista inteira (0 → 14) representa d₁ + d₂: as marcas mostram km */}
         <RulerTrack
           length={14}
