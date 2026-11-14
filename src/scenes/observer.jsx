@@ -3,12 +3,17 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useThrottled } from "./useThrottled.js";
 
-// Pessoa em pé (observador), virada para +Z. Altura ≈ 1,7 m; olhos em y ≈ 1,6.
-export const EYE_Y = 1.6;
+// Pessoa em pé (observador), virada para +Z. O modelo tem 1,7 de altura, mas é
+// desenhado na mesma escala dos carros da cena (o carro mede ~2 unidades para
+// ~4,5 m reais, ou seja ×0,44): assim a pessoa fica um pouco mais alta que o
+// carro, como na vida real (pessoa ≈ 1,7 m; carro esportivo ≈ 1,2 m).
+export const PERSON_SCALE = 0.5;
+export const EYE_Y = 1.6 * PERSON_SCALE;
+export const PERSON_H = 1.75 * PERSON_SCALE;
 export function StandingPerson({ position = [0, 0, 0], rotationY = 0, shirt = "#facc15", skin = "#c98d63", pants = "#334155", hair = "#2a1d14" }) {
   const mat = (c) => <meshStandardMaterial color={c} roughness={0.7} />;
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group position={position} rotation={[0, rotationY, 0]} scale={PERSON_SCALE}>
       {/* pernas */}
       {[-0.1, 0.1].map((x) => (
         <mesh key={x} position={[x, 0.42, 0]} castShadow>
@@ -86,11 +91,13 @@ export function SightAngle({ getEye, getTarget, color, radius = 1.3, onAngle, gr
       ap.setXYZ(i, e[0] + Math.cos(a) * radius, groundY, e[2] + Math.sin(a) * radius);
     }
     ap.needsUpdate = true;
-    const half = phi / 2;
+    // etiqueta sobre a própria linha de visada, um pouco além do arco (fica
+    // ao lado do observador, sem cobrir a pessoa)
+    const half = phi;
     report({
       deg: Math.abs((phi * 180) / Math.PI),
       dx: t[0] - e[0],
-      mid: [e[0] + Math.cos(half) * (radius + 0.75), 0.35, e[2] + Math.sin(half) * (radius + 0.75)],
+      mid: [e[0] + Math.cos(half) * (radius + 1.6), 0.3, e[2] + Math.sin(half) * (radius + 1.6)],
     });
   });
 
