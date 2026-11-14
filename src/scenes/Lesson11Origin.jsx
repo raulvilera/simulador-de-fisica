@@ -3,6 +3,20 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Sun, Planet, Tag } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  bigbang: { id: "bigbang", symbol: "Big Bang", name: "toda a matéria reunida", color: "#facc15" },
+  expansao: { id: "expansao", symbol: "Expansão", name: "os astros se afastam uns dos outros", color: "#60a5fa" },
+  nebulosa: { id: "nebulosa", symbol: "Nebulosa", name: "nuvem de gás e poeira", color: "#c4b5fd" },
+  gravidade: { id: "gravidade", symbol: "Gravidade", name: "contrai a nuvem e faz girar", color: "#f472b6" },
+  disco: { id: "disco", symbol: "Disco de acreção", name: "nuvem achatada girando", color: "#fb923c" },
+  sol: { id: "sol", symbol: "Sol", name: "nasce no centro, mais quente e denso", color: "#fde047" },
+  planetas: { id: "planetas", symbol: "Planetas", name: "fragmentos que se juntaram na parte externa", color: "#4ade80" },
+};
+const Q_UNIVERSE = [Q.bigbang, Q.expansao];
+const Q_SOLAR = [Q.nebulosa, Q.gravidade, Q.disco, Q.sol, Q.planetas];
 
 const N = 900;
 const PLANETS = [
@@ -15,6 +29,8 @@ const PLANETS = [
   { r: 6.2, size: 0.2, color: "#8fd3dc" },
   { r: 7.0, size: 0.2, color: "#4f6fe0" },
 ];
+
+const PLANET_TAG = [Math.cos(4 * 2.4) * PLANETS[4].r, 0, Math.sin(4 * 2.4) * PLANETS[4].r];
 
 function rng(seed) {
   let a = seed;
@@ -60,7 +76,7 @@ function Expansion({ time }) {
 
 // Formação do Sistema Solar: nuvem (nebulosa) → contração e rotação → disco de
 // acreção → Sol no centro e planetas na parte externa do disco.
-function Formation({ time }) {
+function Formation({ time, children }) {
   const geo = useRef();
   const spin = useRef();
   const p = time / 100;
@@ -115,6 +131,7 @@ function Formation({ time }) {
             <Planet radius={pl.size} color={pl.color} emissive={0.25} />
           </group>
         ))}
+      {children}
     </group>
   );
 }
@@ -140,8 +157,22 @@ export default function Lesson11Origin() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 9, 16]} controlsTarget={[0, 0, 0]}>
         <Ticker dir={dir} setTime={setTime} setDir={setDir} />
-        {mode === "universe" ? <Expansion time={time} /> : <Formation time={time} />}
+        {mode === "universe" ? (
+          <Expansion time={time} />
+        ) : (
+          <Formation time={time}>
+            {time >= 75 && <QuantityTag q={Q.planetas} position={[PLANET_TAG[0], 0.9, PLANET_TAG[2]]} />}
+          </Formation>
+        )}
         {mode === "universe" && time < 4 && <Tag position={[0, 1.2, 0]}>toda a matéria reunida</Tag>}
+        {mode === "universe" && time < 12 && <QuantityTag q={Q.bigbang} position={[0, 2.4, 0]} value="(início)" />}
+        {mode === "universe" && time >= 12 && (
+          <QuantityTag q={Q.expansao} position={[time * 0.03, 2 + time * 0.012, 0]} value={`${Math.round(time)} %`} />
+        )}
+        {mode === "solar" && time < 45 && <QuantityTag q={Q.nebulosa} position={[4.5, 3.5, 0]} />}
+        {mode === "solar" && time >= 15 && time < 60 && <QuantityTag q={Q.gravidade} position={[-4.5, 2.6, 0]} />}
+        {mode === "solar" && time >= 45 && time < 80 && <QuantityTag q={Q.disco} position={[6, 0.9, 1.5]} />}
+        {mode === "solar" && time >= 55 && <QuantityTag q={Q.sol} position={[0, 1.9, 0]} />}
       </SceneShell>
 
       <Panel eyebrow="Aula 11 · Origens" title="Do Big Bang ao Sistema Solar">
@@ -174,6 +205,7 @@ export default function Lesson11Origin() {
             ]}
           />
         </div>
+        <QuantityToggles items={mode === "universe" ? Q_UNIVERSE : Q_SOLAR} />
         {mode === "universe" ? (
           <Note>
             O Universo está em expansão: os astros se afastam uns dos outros. Se "voltarmos o

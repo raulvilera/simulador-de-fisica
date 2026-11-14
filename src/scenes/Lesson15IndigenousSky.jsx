@@ -4,6 +4,16 @@ import { Line } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  periodo: { id: "periodo", symbol: "Período", name: "tempo novo ou tempo velho", color: "#facc15" },
+  visiveis: { id: "visiveis", symbol: "Visíveis", name: "constelações acima do horizonte", color: "#4ade80" },
+  abaixo: { id: "abaixo", symbol: "Abaixo do horizonte", name: "não podem ser vistas neste mês", color: "#94a3b8" },
+  calendario: { id: "calendario", symbol: "Calendário", name: "o céu marca plantio, colheita, caça e pesca", color: "#fb923c" },
+};
+const Q_LIST = Object.values(Q);
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -102,6 +112,19 @@ export default function Lesson15IndigenousSky() {
         <Tag position={[0, 0.5, 1]} color="#86efac" size={0.4}>
           horizonte
         </Tag>
+        <QuantityTag
+          q={Q.periodo}
+          position={[0, 11, 1]}
+          value={season === "novo" ? "Tempo novo (Ara pyau)" : "Tempo velho (Ara ymã)"}
+          name={season === "novo" ? "chuvas · primavera e verão" : "seca · outono e inverno"}
+        />
+        <QuantityTag
+          q={Q.visiveis}
+          position={[-8.5, 7.5, 1]}
+          value={CONSTELLATIONS.filter((c) => c.season === season).map((c) => c.name.split(" (")[0]).join(" e ")}
+        />
+        <QuantityTag q={Q.abaixo} position={[0, -2.2, 1]} />
+        <QuantityTag q={Q.calendario} position={[8.5, 7.5, 1]} value={MONTHS[month - 1]} />
       </SceneShell>
 
       <Panel eyebrow="Aula 15 · Etnoastronomia" title="Constelações indígenas: o céu guarani">
@@ -129,6 +152,7 @@ export default function Lesson15IndigenousSky() {
             ))}
           </div>
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           <b>{CONSTELLATIONS[sel].name}:</b> {CONSTELLATIONS[sel].info}
         </Note>

@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getLessonBySlug } from "../data/lessons.js";
 import { useAppStore } from "../store/useAppStore.js";
 import "./LessonLayout.css";
 import Annotations from "./Annotations.jsx";
+import { useConcepts } from "../scenes/quantities.jsx";
 
 import Lesson1History from "../scenes/Lesson1History.jsx";
 import Lesson2ReferenceFrame from "../scenes/Lesson2ReferenceFrame.jsx";
@@ -76,6 +77,8 @@ const SHEET_ORDER = ["min", "half", "full"];
 
 function LessonView({ lesson, mode, SceneComponent }) {
   const [sheet, setSheet] = useState("half");
+  // cada aula começa com todas as etiquetas de conceitos visíveis
+  useEffect(() => useConcepts.getState().showAll(), []);
   const touchStartY = useRef(null);
 
   const step = (dir) =>

@@ -3,6 +3,16 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag, Sun, Planet, Earth, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  estrela: { id: "estrela", symbol: "Estrela", name: "o Sol, no centro do sistema", color: "#fde047" },
+  tipo: { id: "tipo", symbol: "Tipo", name: "rochoso ou gasoso", color: "#fb923c" },
+  translacao: { id: "translacao", symbol: "Translação", name: "uma volta ao redor do Sol", color: "#60a5fa" },
+  cinturao: { id: "cinturao", symbol: "Cinturão de asteroides", name: "separa rochosos (dentro) e gasosos (fora)", color: "#a8a29e" },
+};
+const Q_LIST = Object.values(Q);
 
 // Dados do material da aula (períodos em anos terrestres, distância média em
 // milhões de km). Tamanhos e distâncias na cena NÃO estão em escala real.
@@ -42,6 +52,12 @@ function Orbiting({ planet, index, speed, selected, onSelect }) {
       <Tag position={[0, planet.size + 0.35, 0]} color={selected ? "#fde68a" : "#aab3cf"} size={selected ? 0.34 : 0.24}>
         {planet.name}
       </Tag>
+      {selected && (
+        <>
+          <QuantityTag q={Q.tipo} position={[0, planet.size + 1.25, 0]} value={planet.type} />
+          <QuantityTag q={Q.translacao} position={[0, -planet.size - 0.7, 0]} value={planet.period} />
+        </>
+      )}
     </group>
   );
 }
@@ -56,6 +72,8 @@ export default function Lesson12Planets() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 14, 24]} controlsTarget={[0, 0, 0]} maxDistance={40}>
         <Sun radius={0.9} />
+        <QuantityTag q={Q.estrela} position={[0, 1.7, 0]} />
+        <QuantityTag q={Q.cinturao} position={[0, 0.3, 5.45]} />
         {PLANETS.map((pl, i) => (
           <group key={pl.name}>
             {orbits && (
@@ -95,6 +113,7 @@ export default function Lesson12Planets() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           <b>{p.name}:</b> {p.fact}
         </Note>

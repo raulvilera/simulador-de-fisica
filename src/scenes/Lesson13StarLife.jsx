@@ -4,6 +4,17 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Tag, Glow } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  fase: { id: "fase", symbol: "Fase", name: "etapa da vida da estrela", color: "#facc15" },
+  massa: { id: "massa", symbol: "Massa", name: "define cor, tempo de vida e destino", color: "#60a5fa" },
+  fusao: { id: "fusao", symbol: "Fusão nuclear", name: "hidrogênio se une formando hélio (energia)", color: "#fb923c" },
+  gravidade: { id: "gravidade", symbol: "Gravidade", name: "puxa a matéria para o centro", color: "#f472b6" },
+  destino: { id: "destino", symbol: "Destino final", name: "depende da massa inicial", color: "#a78bfa" },
+};
+const Q_LIST = Object.values(Q);
 
 // Cor de uma estrela na fase principal conforme a massa (mais massa → mais
 // quente → mais azulada).
@@ -145,6 +156,13 @@ export default function Lesson13StarLife() {
         <Clock playing={playing} setAge={setAge} setPlaying={setPlaying} />
         {p < 0.3 && <Nebula opacity={1 - p / 0.3} />}
         <Star p={p} mass={mass} />
+        <QuantityTag q={Q.fase} position={[0, 4.2, 0]} value={phaseOf(p, mass)} />
+        <QuantityTag q={Q.massa} position={[-5, 2.2, 0]} value={`= ${String(mass).replace(".", ",")} M☉`} />
+        {p >= 0.3 && p < 0.86 && <QuantityTag q={Q.fusao} position={[5, 1.2, 0]} name={p < 0.68 ? "H + H → He: a energia da estrela" : "acaba o hidrogênio do núcleo"} />}
+        {(p < 0.3 || p >= 0.86) && (
+          <QuantityTag q={Q.gravidade} position={[5, 1.2, 0]} name={p < 0.3 ? "junta gás e poeira da nebulosa" : "sem fusão, a gravidade faz a estrela colapsar"} />
+        )}
+        <QuantityTag q={Q.destino} position={[-5, -2, 0]} value={fate(mass)} />
       </SceneShell>
 
       <Panel eyebrow="Aula 13 · Estrelas" title="Ciclo de vida das estrelas">
@@ -174,6 +192,7 @@ export default function Lesson13StarLife() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           Estrelas nascem em <b>nebulosas</b>: a gravidade junta gás e poeira até formar uma
           protoestrela. A energia vem da <b>fusão nuclear</b> (hidrogênio se une formando hélio) —

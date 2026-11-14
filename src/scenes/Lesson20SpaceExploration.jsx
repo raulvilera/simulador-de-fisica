@@ -4,6 +4,16 @@ import { Line } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag, Sun, Earth, Planet, OrbitRing } from "./space.jsx";
 import { Readout } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  orbita: { id: "orbita", symbol: "Órbita", name: "a gravidade da Terra mantém a nave girando", color: "#60a5fa" },
+  satelite: { id: "satelite", symbol: "Satélite artificial", name: "objeto lançado para orbitar a Terra", color: "#e5e7eb" },
+  viagem: { id: "viagem", symbol: "Trajetória", name: "viagem de ida e volta", color: "#fde68a" },
+  gps: { id: "gps", symbol: "GPS", name: "receptor calcula a posição com sinais de vários satélites", color: "#86efac" },
+};
+const Q_LIST = Object.values(Q);
 
 // Marcos da exploração espacial (datas e dados do material da aula).
 const MILESTONES = [
@@ -104,6 +114,15 @@ export default function Lesson20SpaceExploration() {
         <Sun position={[-30, 12, 18]} radius={1.5} />
         <SpinningEarth />
         {m.kind === "orbit" && <Orbiter radius={m.radius} color={m.color} station={m.station} label={m.title} />}
+        {m.kind === "orbit" && (
+          <>
+            <QuantityTag q={Q.orbita} position={[-m.radius, 0.2, 0]} value={m.title === "Sputnik 1" ? "1 volta a cada 96 min" : undefined} />
+            <QuantityTag q={Q.satelite} position={[0, 2.9, 0]} value={m.title} />
+          </>
+        )}
+        {m.kind === "moon" && <QuantityTag q={Q.viagem} position={[5.8, 1.9, -1]} value="Terra → Lua ≈ 384 mil km" />}
+        {m.kind === "mars" && <QuantityTag q={Q.viagem} position={[6.3, 1.9, 0.5]} value="Terra → Marte: 6 a 7 meses" />}
+        {gps && <QuantityTag q={Q.gps} position={[0.9, 2.4, 1.5]} value="posição: latitude e longitude" />}
         {m.kind === "moon" && (
           <>
             <group position={[9, 0, -2]}>
@@ -159,6 +178,7 @@ export default function Lesson20SpaceExploration() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           <b>{m.title}:</b> {m.text}
         </Note>

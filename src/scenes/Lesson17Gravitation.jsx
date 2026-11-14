@@ -3,6 +3,18 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Tag, Sun, Earth, Planet, OrbitRing, ArrowBetween } from "./space.jsx";
 import { Readout, Slider, Formulas } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  f: { id: "f", symbol: "F", name: "força de atração (igual nos dois corpos)", color: "#f87171" },
+  par: { id: "par", symbol: "Ação e reação", name: "um puxa o outro com a mesma força", color: "#f472b6" },
+  mare: { id: "mare", symbol: "Maré alta", name: "oceano puxado na direção da Lua", color: "#38bdf8" },
+  lua: { id: "lua", symbol: "Atração da Lua", name: "força gravitacional sobre a Terra", color: "#f87171" },
+  alinh: { id: "alinh", symbol: "Alinhamento", name: "Sol, Terra e Lua", color: "#facc15" },
+};
+const Q_LAW = [Q.f, Q.par];
+const Q_TIDES = [Q.mare, Q.lua, Q.alinh];
 
 // --- Modo 1: dois corpos e a Lei da Gravitação Universal -------------------
 function TwoBodies({ m1, m2, d, force }) {
@@ -27,6 +39,8 @@ function TwoBodies({ m1, m2, d, force }) {
       <ArrowBetween from={[x2, -r2 - 0.35, 0]} to={[x2 - len, -r2 - 0.35, 0]} color="#f87171" />
       <ArrowBetween from={[x1, 2.6, 0]} to={[x2, 2.6, 0]} color="#64748b" thickness={0.02} />
       <Tag position={[0, 3.0, 0]} color="#aab3cf">{`d = ${d}`}</Tag>
+      <QuantityTag q={Q.f} position={[0, -1.9, 0]} value={`= ${m1} × ${m2} ÷ ${d}² = ${force.toFixed(2).replace(".", ",")}`} />
+      <QuantityTag q={Q.par} position={[0, -2.9, 0]} />
     </>
   );
 }
@@ -60,6 +74,13 @@ function Tides({ moonAngle, playing, setMoonAngle }) {
         <Tag position={[0, 0.65, 0]}>Lua</Tag>
       </group>
       <ArrowBetween from={[Math.cos(a) * 1.5, 0, Math.sin(a) * 1.5]} to={[Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2]} color="#f87171" />
+      <QuantityTag q={Q.lua} position={[Math.cos(a) * 2.4, 0.6, Math.sin(a) * 2.4]} />
+      <QuantityTag q={Q.mare} position={[-Math.cos(a) * 1.9, -0.9, -Math.sin(a) * 1.9]} name="dois bojos: do lado da Lua e do lado oposto" />
+      <QuantityTag
+        q={Q.alinh}
+        position={[-4.5, 2.2, 0]}
+        value={Math.abs(Math.cos(a)) > 0.85 ? "alinhados → marés mais altas" : Math.abs(Math.cos(a)) < 0.5 ? "ângulo reto → marés menores" : "intermediário"}
+      />
     </>
   );
 }
@@ -130,6 +151,7 @@ export default function Lesson17Gravitation() {
           )}
         </div>
         <Formulas list={mode === "law" ? ["F ∝ m1 · m2 / d²", "F = m · g"] : []} />
+        <QuantityToggles items={mode === "law" ? Q_LAW : Q_TIDES} />
         {mode === "law" ? (
           <Note>
             <b>Lei da Gravitação Universal</b> (Newton, 1687): dois corpos se atraem com uma força

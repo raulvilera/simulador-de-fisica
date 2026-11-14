@@ -3,6 +3,17 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles, SpanArrow, Concept } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  t1: { id: "t1", symbol: "Trecho 1", name: "d₁, v₁ e t₁", color: "#38bdf8" },
+  t2: { id: "t2", symbol: "Trecho 2", name: "d₂, v₂ e t₂", color: "#f472b6" },
+  vm: { id: "vm", symbol: "v média", name: "ΔS total ÷ Δt total", color: "#4ade80" },
+  err: { id: "err", symbol: "média aritmética", name: "(v₁ + v₂) ÷ 2 — NÃO é a velocidade média", color: "#f87171" },
+};
+const Q_LIST = Object.values(Q);
+const f1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
 
 export default function Lesson5VelocityMulti() {
   const [d1, setD1] = useState(60); // km
@@ -19,7 +30,7 @@ export default function Lesson5VelocityMulti() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[3.5, 3.2, 12.5]} controlsTarget={[7, 0.2, 0]}>
+      <SceneShell cameraPosition={[4.6, 4.8, 18]} controlsTarget={[6, 1.8, 0]}>
         <RulerTrack length={14} start={0} highlight={[0, (14 * d1) / (d1 + d2), 14]} />
         <AnimatedCar
           key={resetKey}
@@ -29,6 +40,34 @@ export default function Lesson5VelocityMulti() {
           t2={t2}
           splitX={(14 * d1) / (d1 + d2)}
         />
+
+        <Concept id="t1">
+          <SpanArrow getFrom={() => 0} getTo={() => (14 * d1) / (d1 + d2)} y={2.2} color={Q.t1.color} />
+        </Concept>
+        <QuantityTag
+          q={Q.t1}
+          position={[(7 * d1) / (d1 + d2), 2.65, 0]}
+          value={`d₁ = ${d1} km · v₁ = ${v1} km/h`}
+          name={`t₁ = d₁ ÷ v₁ = ${f1(t1)} h`}
+        />
+        <Concept id="t2">
+          <SpanArrow getFrom={() => (14 * d1) / (d1 + d2)} getTo={() => 14} y={2.2} color={Q.t2.color} />
+        </Concept>
+        <QuantityTag
+          q={Q.t2}
+          position={[(14 * d1) / (d1 + d2) + (7 * d2) / (d1 + d2), 1.6, 0]}
+          value={`d₂ = ${d2} km · v₂ = ${v2} km/h`}
+          name={`t₂ = d₂ ÷ v₂ = ${f1(t2)} h`}
+        />
+        <Concept id="vm">
+          <SpanArrow getFrom={() => 0} getTo={() => 14} y={3.3} color={Q.vm.color} width={0.07} />
+        </Concept>
+        <QuantityTag
+          q={Q.vm}
+          position={[7, 3.75, 0]}
+          value={`= (${d1} + ${d2}) ÷ (${f1(t1)} + ${f1(t2)}) = ${f1(vMediaTotal)} km/h`}
+        />
+        <QuantityTag q={Q.err} position={[7, 4.65, 0]} value={`= ${f1(vMediaErrada)} km/h ✗`} />
       </SceneShell>
 
       <div className="panel">
@@ -62,6 +101,7 @@ export default function Lesson5VelocityMulti() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           A velocidade média do percurso completo é ΔS<sub>total</sub>/Δt<sub>total</sub>, e{" "}
           <strong>não</strong> a média aritmética das velocidades de cada trecho — os dois valores só

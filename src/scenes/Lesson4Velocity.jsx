@@ -4,6 +4,17 @@ import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles, SpanArrow, Concept } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  ds: { id: "ds", symbol: "ΔS", name: "deslocamento da viagem", color: "#fb923c" },
+  dt: { id: "dt", symbol: "Δt", name: "intervalo de tempo", color: "#a78bfa" },
+  vm: { id: "vm", symbol: "v média", name: "ΔS ÷ Δt (a viagem inteira)", color: "#4ade80" },
+  vi: { id: "vi", symbol: "v instantânea", name: "o que o velocímetro mostra agora", color: "#38bdf8" },
+};
+const Q_LIST = Object.values(Q);
+const fmt = (v) => String(v).replace(".", ",");
 
 export default function Lesson4Velocity() {
   const [distance, setDistance] = useState(200); // km (ΔS)
@@ -16,7 +27,7 @@ export default function Lesson4Velocity() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[3.5, 3.2, 12.5]} controlsTarget={[7, 0.2, 0]}>
+      <SceneShell cameraPosition={[4.6, 4.4, 17]} controlsTarget={[6, 1.4, 0]}>
         <RulerTrack length={14} start={0} />
         <AnimatedCar
           key={resetKey}
@@ -24,7 +35,16 @@ export default function Lesson4Velocity() {
           resetKey={resetKey}
           durationSeconds={6}
           onSpeedUpdate={setInstSpeed}
-        />
+        >
+          <QuantityTag q={Q.vi} position={[0, 1.45, 0]} value={`= ${instSpeed.toFixed(0)} km/h`} />
+        </AnimatedCar>
+
+        <Concept id="ds">
+          <SpanArrow getFrom={() => 0} getTo={() => 13} y={2.3} color={Q.ds.color} />
+        </Concept>
+        <QuantityTag q={Q.ds} position={[4, 2.7, 0]} value={`= ${distance} km`} />
+        <QuantityTag q={Q.dt} position={[9.5, 2.7, 0]} value={`= ${fmt(time)} h`} name="do início ao fim da viagem" />
+        <QuantityTag q={Q.vm} position={[6.5, 3.6, 0]} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
       </SceneShell>
 
       <div className="panel">
@@ -60,6 +80,7 @@ export default function Lesson4Velocity() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           A velocidade média (v = ΔS/Δt) descreve a viagem inteira. Já o velocímetro mostra a
           velocidade instantânea, que varia a cada momento — repare que ela oscila durante a
@@ -70,7 +91,7 @@ export default function Lesson4Velocity() {
   );
 }
 
-function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate }) {
+function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate, children }) {
   const ref = useRef();
   const t = useRef(0);
   const report = useThrottled(onSpeedUpdate);
@@ -89,6 +110,7 @@ function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate }) {
   return (
     <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
       <Vehicle color="#3b82f6" />
+      {children}
     </group>
   );
 }

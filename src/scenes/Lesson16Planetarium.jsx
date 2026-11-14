@@ -4,6 +4,16 @@ import { Line } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  horizonte: { id: "horizonte", symbol: "Horizonte", name: "limite entre o céu e o solo", color: "#86efac" },
+  zenite: { id: "zenite", symbol: "Zênite", name: "ponto bem acima da cabeça", color: "#facc15" },
+  polo: { id: "polo", symbol: "Polo Sul celeste", name: "o céu parece girar em volta dele", color: "#60a5fa" },
+  ecliptica: { id: "ecliptica", symbol: "Eclíptica", name: "caminho aparente do Sol no céu", color: "#fb923c" },
+};
+const Q_LIST = Object.values(Q);
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const LAT = (-23.5 * Math.PI) / 180; // latitude aproximada de São Paulo
@@ -159,6 +169,10 @@ export default function Lesson16Planetarium() {
             <meshBasicMaterial color="#0a1a10" side={THREE.DoubleSide} />
           </mesh>
         )}
+        <QuantityTag q={Q.horizonte} position={[4, 3.2, R * 0.85]} />
+        <QuantityTag q={Q.zenite} position={[0, R * 0.95, 0]} />
+        <QuantityTag q={Q.polo} position={toSky(0, -89.9, lst, R * 0.95)} name="o Cruzeiro do Sul aponta para ele" />
+        {zodiac && <QuantityTag q={Q.ecliptica} position={toSky(...eclipticToEquatorial(sunLon + 40), lst, R * 0.95)} />}
         {[["N", 0, -1], ["S", 0, 1], ["L", 1, 0], ["O", -1, 0]].map(([l, x, z]) => (
           <Tag key={l} position={[x * R * 0.9, 1.5, z * R * 0.9]} size={1.6} color="#86efac">
             {l}
@@ -183,6 +197,7 @@ export default function Lesson16Planetarium() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           Arraste a tela para olhar ao redor (a vista começa voltada para o <b>Sul</b>). Compare
           julho com outro mês: Centauro e Cruzeiro do Sul mudam de posição no céu ao longo do ano —

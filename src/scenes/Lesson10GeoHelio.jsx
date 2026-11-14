@@ -4,6 +4,16 @@ import { Line } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Check, Tag, Sun, Earth, Planet, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  centro: { id: "centro", symbol: "Centro", name: "astro no centro do modelo", color: "#facc15" },
+  orbita: { id: "orbita", symbol: "Órbita", name: "caminho em volta do centro", color: "#60a5fa" },
+  retro: { id: "retro", symbol: "Movimento retrógrado", name: "Marte parece andar para trás", color: "#f87171" },
+  epi: { id: "epi", symbol: "Epiciclo", name: "laçada que Ptolomeu usava para explicar", color: "#fb923c" },
+};
+const Q_LIST = Object.values(Q);
 
 const R_EARTH = 3; // raio da órbita da Terra (unidades de cena)
 const R_MARS = R_EARTH * 1.52; // Marte fica ~1,52 vez mais longe do Sol
@@ -16,7 +26,7 @@ const marsAt = (t) => [
   Math.sin((t / T_MARS) * 2 * Math.PI) * R_MARS,
 ];
 
-function System({ model, playing, speed, resetKey, onRetro }) {
+function System({ model, playing, speed, resetKey, onRetro, retro: retroNow }) {
   const sun = useRef();
   const earth = useRef();
   const mars = useRef();
@@ -65,18 +75,30 @@ function System({ model, playing, speed, resetKey, onRetro }) {
         <Tag position={[0, 0.95, 0]} color="#ffc94d">
           Sol
         </Tag>
+        {model === "helio" && (
+          <QuantityTag q={Q.centro} position={[0, 1.7, 0]} value="Sol" name="heliocentrismo (Copérnico)" />
+        )}
       </group>
       <group ref={earth}>
         <Earth radius={0.28} />
         <Tag position={[0, 0.6, 0]} color="#7dd3fc">
           Terra
         </Tag>
+        {model === "geo" && (
+          <QuantityTag q={Q.centro} position={[0, 1.3, 0]} value="Terra" name="geocentrismo (Ptolomeu)" />
+        )}
       </group>
       <group ref={mars}>
         <Planet radius={0.2} color="#d1603d" />
         <Tag position={[0, 0.5, 0]} color="#f8a17f">
           Marte
         </Tag>
+        <QuantityTag
+          q={Q.retro}
+          position={[0, 1.2, 0]}
+          symbol={retroNow ? "Movimento retrógrado" : "Movimento direto"}
+          name={retroNow ? "visto da Terra, Marte parece recuar" : "visto da Terra, Marte avança"}
+        />
       </group>
     </>
   );
@@ -106,7 +128,17 @@ export default function Lesson10GeoHelio() {
   return (
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 13, 11]} controlsTarget={[0, 0, 0]}>
-        <System model={model} playing={playing} speed={speed} resetKey={resetKey} onRetro={setRetro} />
+        <System model={model} playing={playing} speed={speed} resetKey={resetKey} onRetro={setRetro} retro={retro} />
+        {showPaths && (
+          <QuantityTag
+            q={Q.orbita}
+            position={[R_EARTH * 0.72, 0.4, R_EARTH * 0.72]}
+            value={model === "helio" ? "da Terra em volta do Sol" : "aparente do Sol em volta da Terra"}
+          />
+        )}
+        {showPaths && model === "geo" && (
+          <QuantityTag q={Q.epi} position={[marsLoops[300][0], 0.6, marsLoops[300][2]]} />
+        )}
         {showPaths && model === "helio" && (
           <>
             <OrbitRing radius={R_EARTH} color="#3b82f6" />
@@ -148,6 +180,7 @@ export default function Lesson10GeoHelio() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           Os dois modelos mostram <b>o mesmo movimento</b>, visto de referenciais diferentes. Com a
           Terra no centro, Marte parece dar "laçadas" no céu (movimento retrógrado) — Ptolomeu
