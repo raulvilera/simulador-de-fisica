@@ -5,7 +5,7 @@ import SceneShell from "./SceneShell.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
 import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 import { Readout } from "../components/ui.jsx";
 
 const TOWER_HEIGHT = 9;
@@ -21,21 +21,30 @@ const Q = {
 };
 const Q_LIST = Object.values(Q);
 
-function FallingBalls({ dropping, aristotleMode, onLanded }) {
+// Altura de soltura na cena: até 9 m em escala real (ao longo da torre); acima
+// disso a torre representa a altura digitada (escala comprimida).
+const sceneScale = (h) => (h <= TOWER_HEIGHT ? 1 : TOWER_HEIGHT / h);
+// Quedas muito longas são aceleradas (no máximo ~6 s de animação) e as muito
+// curtas, desaceleradas (mínimo ~0,8 s), para dar para ver. O tempo medido é o real.
+const playRate = (T) => (T > 6 ? T / 6 : T < 0.8 ? T / 0.8 : 1);
+
+function FallingBalls({ dropping, aristotleMode, onLanded, h, g }) {
   const heavyRef = useRef();
   const lightRef = useRef();
   const t = useRef(0);
   const landed = useRef(false);
 
   useFrame((_, delta) => {
-    if (!dropping) return;
-    t.current += delta;
+    if (!dropping || landed.current) return;
+    const T = Math.sqrt((2 * h) / g); // tempo real de queda
+    t.current = Math.min(t.current + delta * playRate(T), T);
+    const k = sceneScale(h);
 
     // Galileu: mesma aceleração (g) para ambas as massas, ignorando o ar.
-    const yGalileo = TOWER_HEIGHT - 0.5 * G * t.current ** 2;
+    const yGalileo = (h - 0.5 * g * t.current ** 2) * k;
 
     // "Visão aristotélica" (incorreta): o corpo mais pesado cairia proporcionalmente mais rápido.
-    const yHeavyAristotle = TOWER_HEIGHT - 0.5 * (G * 1.6) * t.current ** 2;
+    const yHeavyAristotle = (h - 0.5 * (g * 1.6) * t.current ** 2) * k;
 
     const yHeavy = aristotleMode ? yHeavyAristotle : yGalileo;
     const yLight = yGalileo;
@@ -43,19 +52,19 @@ function FallingBalls({ dropping, aristotleMode, onLanded }) {
     if (heavyRef.current) heavyRef.current.position.y = Math.max(yHeavy, 0.3);
     if (lightRef.current) lightRef.current.position.y = Math.max(yLight, 0.3);
 
-    if (!landed.current && yLight <= 0.3) {
+    if (t.current >= T) {
       landed.current = true;
-      onLanded?.(t.current.toFixed(2));
+      onLanded?.(T.toFixed(2));
     }
   });
 
   return (
     <>
-      <group ref={heavyRef} position={[-0.6, TOWER_HEIGHT, 0]}>
+      <group ref={heavyRef} position={[-0.6, Math.max(h * sceneScale(h), 0.3), 0]}>
         <Ball position={[0, 0, 0]} color="#f87171" radius={0.38} />
         <QuantityTag id="m" position={[-1.1, 0.35, 0]} color="#f87171" symbol="m maior" name="esfera pesada" />
       </group>
-      <group ref={lightRef} position={[0.6, TOWER_HEIGHT, 0]}>
+      <group ref={lightRef} position={[0.6, Math.max(h * sceneScale(h), 0.3), 0]}>
         <Ball position={[0, 0, 0]} color="#38bdf8" radius={0.22} />
         <QuantityTag id="m" position={[1.1, 0.35, 0]} color="#38bdf8" symbol="m menor" name="esfera leve" />
       </group>
@@ -148,13 +157,25 @@ export default function Lesson1History() {
     <div className="lesson__canvas">
       <SceneShell setting="pisa" cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
         <Tower />
-        <FallingBalls key={resetKey} dropping={dropping} aristotleMode={aristotleMode} onLanded={setLandTime} />
+        <FallingBalls
+          key={`${resetKey}-${hC}-${gC}`}
+          dropping={dropping}
+          aristotleMode={aristotleMode}
+          onLanded={setLandTime}
+          h={hC}
+          g={gC}
+        />
 
         {/* h: altura de onde as esferas são soltas */}
         <Concept id="h">
-          <Pin x={2.1} z={0} height={TOWER_HEIGHT} color={Q.h.color} />
+          <Pin x={2.1} z={0} height={Math.max(hC * sceneScale(hC), 0.05)} color={Q.h.color} />
         </Concept>
-        <QuantityTag q={Q.h} position={[2.9, TOWER_HEIGHT / 2, 0]} value={`= ${TOWER_HEIGHT} m`} />
+        <QuantityTag
+          q={Q.h}
+          position={[2.9, Math.max((hC * sceneScale(hC)) / 2, 0.6), 0]}
+          value={`= ${num(hC)} m`}
+          name={hC > TOWER_HEIGHT ? "altura da queda (fora de escala)" : "altura da queda"}
+        />
 
         {/* g: aceleração da gravidade, apontando para baixo */}
         <Concept id="g">
@@ -165,7 +186,7 @@ export default function Lesson1History() {
         <QuantityTag
           q={Q.g}
           position={[-3.6, 6.3, 0]}
-          value="≈ 9,8 m/s²"
+          value={`= ${num(gC)} m/s²`}
           name={aristotleMode ? "Aristóteles: maior para o mais pesado (errado)" : "Galileu: igual para as duas massas"}
         />
 
@@ -222,19 +243,20 @@ export default function Lesson1History() {
             { symbol: "g", name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)", unit: "m/s²", color: Q.g.color },
           ]}
           inputs={[
-            { key: "h", symbol: "h", unit: "m", value: hC, onChange: setHC, min: 0, max: 100000, color: Q.h.color },
-            { key: "g", symbol: "g", unit: "m/s²", value: gC, onChange: setGC, min: 0.01, max: 1000, color: Q.g.color },
+            { key: "h", symbol: "h", unit: "m", value: hC, onChange: (v) => { setHC(v); reset(); }, min: 0.01, max: 1e9, color: Q.h.color },
+            { key: "g", symbol: "g", unit: "m/s²", value: gC, onChange: (v) => { setGC(v); reset(); }, min: 0.001, max: 1e9, color: Q.g.color },
           ]}
           steps={
             <>
-              t = √(2 × {num(hC)} ÷ {num(gC)}) = <b>{num(Math.sqrt((2 * hC) / gC))} s</b>
+              t = √(2 × {nump(hC)} ÷ {nump(gC)}) = <b>{num(Math.sqrt((2 * hC) / gC))} s</b>
               <br />o mesmo tempo para a esfera pesada e para a leve
             </>
           }
-          note="A torre da cena tem 9 m. Experimente g = 1,6 (Lua): a queda fica mais lenta, mas pena e martelo continuam chegando juntos."
+          note="A animação usa h e g digitados (acima de 9 m a torre fica fora de escala; quedas longas são aceleradas e o tempo mostrado é o real). Experimente g = 1,6 (Lua)."
           onReset={() => {
             setHC(TOWER_HEIGHT);
             setGC(G);
+            reset();
           }}
         />
 

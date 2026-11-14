@@ -3,9 +3,10 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -25,20 +26,26 @@ export default function Lesson4Velocity() {
   const [instSpeed, setInstSpeed] = useState(0);
 
   const vMedia = time > 0 ? (distance / time).toFixed(1) : "0";
-  const [kmh, setKmh] = useState(72); // conversor km/h → m/s
 
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.4, 17]} controlsTarget={[6, 1.4, 0]}>
-        <RulerTrack length={14} start={0} />
+        {/* a pista (0 → 13) representa o ΔS digitado: as marcas mostram km */}
+        <RulerTrack
+          length={14}
+          start={0}
+          step={(niceStep(distance / 10) * 13) / distance}
+          labelOf={(x) => fmtNum((x * distance) / 13, 1)}
+        />
         <AnimatedCar
           key={resetKey}
           playing={playing}
           resetKey={resetKey}
           durationSeconds={6}
+          vm={distance / time}
           onSpeedUpdate={setInstSpeed}
         >
-          <QuantityTag q={Q.vi} position={[0, 1.45, 0]} value={`= ${instSpeed.toFixed(0)} km/h`} />
+          <QuantityTag q={Q.vi} position={[0, 1.45, 0]} value={`= ${num(instSpeed, 1)} km/h`} />
         </AnimatedCar>
 
         <Concept id="ds">
@@ -72,7 +79,7 @@ export default function Lesson4Velocity() {
           <div className="speedo">
             <div className="readout__label">Velocímetro (instantânea)</div>
             <div className="readout__value" style={{ fontSize: "1.8rem" }}>
-              {instSpeed.toFixed(0)} km/h
+              {num(instSpeed, 1)} km/h
             </div>
           </div>
           <Readout
@@ -95,12 +102,12 @@ export default function Lesson4Velocity() {
             { symbol: "Δt", name: "intervalo de tempo: quanto durou a viagem", unit: "h ou s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "ds", symbol: "ΔS", unit: "km", value: distance, onChange: setDistance, min: 0, max: 100000, color: Q.ds.color },
-            { key: "dt", symbol: "Δt", unit: "h", value: time, onChange: setTime, min: 0.01, max: 10000, color: Q.dt.color },
+            { key: "ds", symbol: "ΔS", unit: "km", value: distance, onChange: setDistance, min: 0.001, max: 1e12, color: Q.ds.color },
+            { key: "dt", symbol: "Δt", unit: "h", value: time, onChange: setTime, min: 0.0001, max: 1e12, color: Q.dt.color },
           ]}
           steps={
             <>
-              v = {num(distance)} ÷ {num(time)} = <b>{num(distance / time)} km/h</b>
+              v = {num(distance)} ÷ {nump(time)} = <b>{num(distance / time)} km/h</b>
               <br />= {num(distance / time)} ÷ 3,6 = <b>{num(distance / time / 3.6)} m/s</b>
             </>
           }
@@ -108,23 +115,6 @@ export default function Lesson4Velocity() {
             setDistance(200);
             setTime(2);
           }}
-        />
-
-        <FormulaCard
-          title="Conversão de unidades"
-          formula={<>v (m/s) = v (km/h) ÷ 3,6</>}
-          terms={[
-            { symbol: "km/h", name: "quilômetros por hora (velocímetro)", color: "#38bdf8" },
-            { symbol: "m/s", name: "metros por segundo (unidade do SI)", color: "#4ade80" },
-            { symbol: "3,6", name: "1 km/h = 1000 m ÷ 3600 s", color: "#fbbf24" },
-          ]}
-          inputs={[{ key: "kmh", symbol: "v", unit: "km/h", value: kmh, onChange: setKmh, min: 0, max: 100000, color: "#38bdf8" }]}
-          steps={
-            <>
-              {num(kmh)} ÷ 3,6 = <b>{num(kmh / 3.6)} m/s</b>
-            </>
-          }
-          onReset={() => setKmh(72)}
         />
 
         <QuantityToggles items={Q_LIST} />
@@ -138,7 +128,12 @@ export default function Lesson4Velocity() {
   );
 }
 
-function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate, children }) {
+// A viagem dura `durationSeconds` na tela (representando Δt). A velocidade
+// instantânea oscila em torno da média v = ΔS/Δt, mas a média dela é sempre
+// exatamente v: x(p) = 13·(p + A·sen(2πnp)/(2πn)).
+const A = 0.3;
+const N = 3;
+function AnimatedCar({ playing, resetKey, durationSeconds, vm, onSpeedUpdate, children }) {
   const ref = useRef();
   const t = useRef(0);
   const report = useThrottled(onSpeedUpdate);
@@ -147,9 +142,9 @@ function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate, childr
     if (!playing) return;
     t.current += delta;
     const progress = Math.min(t.current / durationSeconds, 1);
-    const x = progress * 13;
+    const x = 13 * (progress + (A * Math.sin(2 * Math.PI * N * progress)) / (2 * Math.PI * N));
     // Velocidade instantânea "ruidosa" em torno de uma média, só para efeito visual/didático.
-    const inst = 70 + Math.sin(t.current * 3) * 25 + Math.sin(t.current * 7) * 10;
+    const inst = vm * (1 + A * Math.cos(2 * Math.PI * N * progress));
     if (ref.current) ref.current.position.x = x;
     report(progress < 1 ? Math.max(inst, 0) : 0, progress >= 1);
   });

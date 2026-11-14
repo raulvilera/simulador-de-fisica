@@ -4,7 +4,7 @@ import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Pin, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
 const EX_JOAO = 3;
@@ -32,8 +32,11 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
     if (playing) {
       x.current.joao += V_JOAO * delta;
       x.current.outro += V_OUTRO * delta;
-      if (x.current.joao > 16) x.current.joao = -16;
-      if (x.current.outro > 16) x.current.outro = -16;
+      // a pista "dá a volta": quem sai por um lado entra pelo outro (vale para
+      // qualquer velocidade, inclusive negativa = andando de ré)
+      const wrap = (v) => ((((v + 16) % 32) + 32) % 32) - 16;
+      x.current.joao = wrap(x.current.joao);
+      x.current.outro = wrap(x.current.outro);
     }
 
     if (joaoRef.current) joaoRef.current.position.x = x.current.joao;
@@ -56,7 +59,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
     <>
       <RulerTrack length={60} start={-30} step={2} z={0} />
       <group ref={joaoRef} position={[0, 0.3, -0.62]}>
-        <Vehicle color="#3b82f6" />
+        <Vehicle color="#3b82f6" rotationY={V_JOAO < 0 ? Math.PI : 0} />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#93c5fd">
           João
         </Label3D>
@@ -71,7 +74,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
         )}
       </group>
       <group ref={outroRef} position={[-4, 0.3, 0.62]}>
-        <Vehicle color="#f87171" />
+        <Vehicle color="#f87171" rotationY={V_OUTRO < 0 ? Math.PI : 0} />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#fca5a5">
           outro carro
         </Label3D>
@@ -160,12 +163,12 @@ export default function Lesson2ReferenceFrame() {
             { symbol: "vJoão", name: "velocidade de João em relação à rua", unit: "m/s", color: Q.vj.color },
           ]}
           inputs={[
-            { key: "vj", symbol: "vJoão", unit: "m/s", value: V_JOAO, onChange: setVJ, min: 0, max: 15, color: Q.vj.color },
-            { key: "vo", symbol: "voutro", unit: "m/s", value: V_OUTRO, onChange: setVO, min: 0, max: 15, color: Q.vo.color },
+            { key: "vj", symbol: "vJoão", unit: "m/s", value: V_JOAO, onChange: setVJ, min: -1e12, max: 1e12, color: Q.vj.color },
+            { key: "vo", symbol: "voutro", unit: "m/s", value: V_OUTRO, onChange: setVO, min: -1e12, max: 1e12, color: Q.vo.color },
           ]}
           steps={
             <>
-              v<sub>rel</sub> = {num(V_OUTRO)} − {num(V_JOAO)} = <b>{num(V_OUTRO - V_JOAO)} m/s</b>
+              v<sub>rel</sub> = {num(V_OUTRO)} − {nump(V_JOAO)} = <b>{num(V_OUTRO - V_JOAO)} m/s</b>
               <br />
               {V_OUTRO - V_JOAO > 0
                 ? "João vê o outro carro se afastar para frente."
@@ -174,7 +177,7 @@ export default function Lesson2ReferenceFrame() {
                   : "João vê o outro carro parado ao lado dele."}
             </>
           }
-          note="Velocidades de 0 a 15 m/s; os carros da cena usam os valores digitados."
+          note="Os carros da cena usam os valores digitados (negativo = sentido contrário). Valores muito altos ficam rápidos demais para acompanhar a olho."
           onReset={() => {
             setVJ(EX_JOAO);
             setVO(EX_OUTRO);

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -36,20 +36,14 @@ export default function Lesson9LabAcceleration() {
     setReadings((prev) => (prev.length >= 2 ? prev : [...prev, { v, boost: level }]));
   };
 
-  const v1 = readings[0]?.v ?? null;
-  const v2 = readings[1]?.v ?? null;
-  const deltaV = v1 != null && v2 != null ? v2 - v1 : null;
-  const accel = deltaV != null ? deltaV / dt : null;
-
-  // calculadora: recebe as medições da cena, mas aceita valores digitados
+  // Velocidades das duas medições: começam com os valores do exemplo e podem
+  // ser digitadas — o carrinho da cena anda exatamente com a velocidade digitada.
   const [v1c, setV1c] = useState(8);
   const [v2c, setV2c] = useState(14);
-  useEffect(() => {
-    if (v1 != null) setV1c(Math.round(v1 * 10) / 10);
-  }, [v1]);
-  useEffect(() => {
-    if (v2 != null) setV2c(Math.round(v2 * 10) / 10);
-  }, [v2]);
+  const v1 = readings.length >= 1 ? v1c : null;
+  const v2 = readings.length >= 2 ? v2c : null;
+  const deltaV = v1 != null && v2 != null ? v2 - v1 : null;
+  const accel = deltaV != null ? deltaV / dt : null;
 
   return (
     <div className="lesson__canvas">
@@ -58,6 +52,7 @@ export default function Lesson9LabAcceleration() {
         <FrictionCart
           running={running}
           boost={boost}
+          speed={boost === 2 ? v2c : v1c}
           resetKey={resetKey}
           onFinish={onFinish}
         />
@@ -123,20 +118,20 @@ export default function Lesson9LabAcceleration() {
             { symbol: "Δt", name: "tempo entre as duas medições", unit: "s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "v1", symbol: "V1", unit: "cm/s", value: v1c, onChange: setV1c, min: -100000, max: 100000, color: Q.v1.color },
-            { key: "v2", symbol: "V2", unit: "cm/s", value: v2c, onChange: setV2c, min: -100000, max: 100000, color: Q.v2.color },
-            { key: "dt", symbol: "Δt", unit: "s", value: dt, onChange: setDt, min: 0.01, max: 100000, color: Q.dt.color },
+            { key: "v1", symbol: "V1", unit: "cm/s", value: v1c, onChange: setV1c, min: -1e12, max: 1e12, color: Q.v1.color },
+            { key: "v2", symbol: "V2", unit: "cm/s", value: v2c, onChange: setV2c, min: -1e12, max: 1e12, color: Q.v2.color },
+            { key: "dt", symbol: "Δt", unit: "s", value: dt, onChange: setDt, min: 0.0001, max: 1e12, color: Q.dt.color },
           ]}
           steps={
             <>
-              ΔV = {num(v2c)} − {num(v1c)} = {num(v2c - v1c)} cm/s
-              <br />a = {num(v2c - v1c)} ÷ {num(dt)} = <b>{num((v2c - v1c) / dt)} cm/s²</b>
+              ΔV = {num(v2c)} − {nump(v1c)} = {num(v2c - v1c)} cm/s
+              <br />a = {num(v2c - v1c)} ÷ {nump(dt)} = <b>{num((v2c - v1c) / dt)} cm/s²</b>
             </>
           }
-          note="V1 e V2 são preenchidos pelas medições da cena; você também pode digitar os valores medidos em sala."
+          note="O carrinho de cada medição anda com a velocidade digitada (negativa = de ré). Digite os valores medidos em sala e repita as medições."
           onReset={() => {
-            setV1c(v1 != null ? Math.round(v1 * 10) / 10 : 8);
-            setV2c(v2 != null ? Math.round(v2 * 10) / 10 : 14);
+            setV1c(8);
+            setV2c(14);
             setDt(3);
           }}
         />
@@ -152,27 +147,31 @@ export default function Lesson9LabAcceleration() {
   );
 }
 
-function FrictionCart({ running, boost, resetKey, onFinish }) {
+// 8 unidades de pista = 24 cm. O carrinho anda com a velocidade `speed` (cm/s)
+// digitada; negativa = de trás para a frente. Percursos muito longos/curtos
+// são acelerados/desacelerados na tela, sem mudar o valor medido.
+function FrictionCart({ running, boost, speed, resetKey, onFinish }) {
   const ref = useRef();
   const t = useRef(0);
-  const speed = useRef(2);
+  const T = Math.abs(speed) > 1e-9 ? 24 / Math.abs(speed) : 0; // tempo real (s)
+  const rate = T > 8 ? T / 8 : T < 0.6 && T > 0 ? T / 0.6 : 1;
+  const startX = speed < 0 ? SCENE_LENGTH : 0;
 
   useFrame((_, delta) => {
     if (!running) return;
-    if (t.current === 0) speed.current = boost === 2 ? 4 + Math.random() * 0.6 : 2 + Math.random() * 0.4;
-    t.current += delta;
-    const x = Math.min(speed.current * t.current, SCENE_LENGTH);
+    t.current = Math.min(t.current + delta * rate, T);
+    const p = T > 0 ? t.current / T : 1;
+    const x = speed < 0 ? SCENE_LENGTH * (1 - p) : SCENE_LENGTH * p;
     if (ref.current) ref.current.position.x = x;
-    if (x >= SCENE_LENGTH) {
-      const v = (SCENE_LENGTH / t.current) * 3; // escala para "cm/s" ilustrativo
-      onFinish?.(v, boost);
+    if (t.current >= T) {
+      onFinish?.(speed, boost);
       t.current = 0;
     }
   });
 
   return (
-    <group key={resetKey + "-" + boost} ref={ref} position={[0, 0.25, 0]} scale={0.7}>
-      <Vehicle color={boost === 2 ? "#ef4444" : "#3b82f6"} />
+    <group key={resetKey + "-" + boost} ref={ref} position={[startX, 0.25, 0]} scale={0.7}>
+      <Vehicle color={boost === 2 ? "#ef4444" : "#3b82f6"} rotationY={speed < 0 ? Math.PI : 0} />
     </group>
   );
 }

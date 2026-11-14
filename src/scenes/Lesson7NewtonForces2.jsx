@@ -3,9 +3,10 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack, Arrow3D } from "./primitives.jsx";
+import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
-import FormulaCard, { num } from "../components/FormulaCard.jsx";
+import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -17,7 +18,7 @@ const Q = {
 };
 const Q_LIST = Object.values(Q);
 const ARROW_SCALE = 1 / 1600; // 1 unidade de seta a cada 1600 N
-const aLen = (f) => Math.min(Math.max(f * ARROW_SCALE, 0.45), 6);
+const aLen = (f) => Math.min(Math.max(Math.abs(f) * ARROW_SCALE, 0.45), 6);
 
 export default function Lesson7NewtonForces2() {
   const [mass, setMass] = useState(800); // kg
@@ -27,16 +28,43 @@ export default function Lesson7NewtonForces2() {
   const [resetKey, setResetKey] = useState(0);
   const [live, setLive] = useState({ v: 0, x: 0, t: 0 });
 
-  const [kmh, setKmh] = useState(108); // conversor km/h → m/s
-  const fRes = Math.max(force - friction, 0);
+  const [kmh, setKmh] = useState(0); // velocidade inicial do carro, em km/h
+  const v0 = kmh / 3.6;
+  // parado, o carro só sai se F > Fat; andando, FRes pode ser negativa (freia)
+  const moving = v0 > 0 || force > friction;
+  const fRes = moving ? force - friction : 0;
   const accel = mass > 0 ? fRes / mass : 0;
+  // a pista mostra o que o carro anda em 5 s (régua em metros, escala automática)
+  const RUN = 5;
+  const tStop = accel < 0 ? v0 / -accel : Infinity;
+  const tEnd = Math.min(RUN, tStop);
+  const L = Math.max(v0 * tEnd + 0.5 * accel * tEnd * tEnd, 0) || 15;
+  const kTrack = 15 / L;
+  const restart = () => {
+    setPlaying(false);
+    setLive({ v: v0, x: 0, t: 0 });
+    setResetKey((k) => k + 1);
+  };
   const vKmh = live.v * 3.6;
 
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[2, 4.6, 18.5]} controlsTarget={[5.6, 1.4, 0]}>
-        <RulerTrack length={16} start={0} />
-        <RaceCar key={resetKey} playing={playing} resetKey={resetKey} accel={accel} onUpdate={setLive}>
+        <RulerTrack
+          length={16}
+          start={0}
+          step={niceStep(L / 10) * kTrack}
+          labelOf={(x) => fmtNum(x / kTrack, 1)}
+        />
+        <RaceCar
+          key={`${resetKey}-${v0}-${accel}-${L}`}
+          playing={playing}
+          accel={accel}
+          v0={v0}
+          kTrack={kTrack}
+          runTime={RUN}
+          onUpdate={setLive}
+        >
           <Concept id="f">
             <Arrow3D from={[1.15, 0.45, 0.75]} length={aLen(force)} color={Q.f.color} />
           </Concept>
@@ -49,13 +77,13 @@ export default function Lesson7NewtonForces2() {
           {friction > 0 && (
             <QuantityTag q={Q.fat} position={[-1.15 - aLen(friction) / 2, 1.0, 0.75]} value={`= ${friction} N`} />
           )}
-          {fRes > 0 && (
+          {fRes !== 0 && (
             <Concept id="fres">
-              <Arrow3D from={[-0.2, 1.75, 0]} length={aLen(fRes)} thickness={1.4} color={Q.fres.color} />
+              <Arrow3D from={[-0.2, 1.75, 0]} dir={Math.sign(fRes)} length={aLen(fRes)} thickness={1.4} color={Q.fres.color} />
             </Concept>
           )}
-          <QuantityTag q={Q.fres} position={[-0.2 + aLen(fRes) / 2, 2.2, 0]} value={`= ${force} − ${friction} = ${fRes} N`} />
-          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${fRes} ÷ ${mass} = ${accel.toFixed(2).replace(".", ",")} m/s²`} />
+          <QuantityTag q={Q.fres} position={[-0.2 + (Math.sign(fRes || 1) * aLen(fRes)) / 2, 2.2, 0]} value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`} />
+          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
           <QuantityTag q={Q.v} position={[0, 0, 2.7]} value={`= ${live.v.toFixed(1).replace(".", ",")} m/s`} />
         </RaceCar>
       </SceneShell>
@@ -75,8 +103,7 @@ export default function Lesson7NewtonForces2() {
               className="btn btn--ghost"
               onClick={() => {
                 setPlaying(false);
-                setLive({ v: 0, x: 0, t: 0 });
-                setResetKey((k) => k + 1);
+                restart();
               }}
             >
               ↺
@@ -106,15 +133,16 @@ export default function Lesson7NewtonForces2() {
             { symbol: "a", name: "aceleração", unit: "m/s²", color: Q.a.color },
           ]}
           inputs={[
-            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 1, max: 100000, color: "#e5e9f5" },
-            { key: "f", symbol: "F", unit: "N", value: force, onChange: setForce, min: 0, max: 1000000, color: Q.f.color },
-            { key: "fat", symbol: "Fat", unit: "N", value: friction, onChange: setFriction, min: 0, max: 1000000, color: Q.fat.color },
+            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.001, max: 1e12, color: "#e5e9f5" },
+            { key: "f", symbol: "F", unit: "N", value: force, onChange: setForce, min: 0, max: 1e12, color: Q.f.color },
+            { key: "fat", symbol: "Fat", unit: "N", value: friction, onChange: setFriction, min: 0, max: 1e12, color: Q.fat.color },
           ]}
           steps={
             <>
-              FRes = {num(force)} − {num(friction)} = <b>{num(force - friction)} N</b>
-              {force - friction < 0 && <span style={{ color: "#fca5a5" }}> (o carro não sai do lugar)</span>}
-              <br />a = {num(fRes)} ÷ {num(mass)} = <b>{num(accel)} m/s²</b>
+              FRes = {num(force)} − {nump(friction)} = <b>{num(force - friction)} N</b>
+              {!moving && <span style={{ color: "#fca5a5" }}> (parado, o atrito equilibra: o carro não sai do lugar)</span>}
+              {moving && fRes < 0 && <span style={{ color: "#fca5a5" }}> (resultante para trás: o carro freia)</span>}
+              <br />a = {num(fRes)} ÷ {nump(mass)} = <b>{num(accel)} m/s²</b>
             </>
           }
           onReset={() => {
@@ -125,19 +153,29 @@ export default function Lesson7NewtonForces2() {
         />
 
         <FormulaCard
-          title="Conversão de unidades"
-          formula={<>v (m/s) = v (km/h) ÷ 3,6</>}
+          title="Velocidade inicial (conversão)"
+          formula={<>v₀ (m/s) = v₀ (km/h) ÷ 3,6</>}
           terms={[
-            { symbol: "km/h", name: "quilômetros por hora", color: "#38bdf8" },
-            { symbol: "m/s", name: "metros por segundo (SI)", color: "#4ade80" },
+            { symbol: "v₀", name: "velocidade com que o carro passa pela largada", color: "#38bdf8" },
+            { symbol: "km/h", name: "quilômetros por hora (velocímetro)", color: "#38bdf8" },
+            { symbol: "m/s", name: "metros por segundo (SI, usado na conta da aceleração)", color: "#4ade80" },
           ]}
-          inputs={[{ key: "kmh", symbol: "v", unit: "km/h", value: kmh, onChange: setKmh, min: 0, max: 100000, color: "#38bdf8" }]}
+          inputs={[
+            { key: "kmh", symbol: "v₀", unit: "km/h", value: kmh, onChange: (v) => { setKmh(v); restart(); }, min: 0, max: 1e9, color: "#38bdf8" },
+          ]}
           steps={
             <>
-              {num(kmh)} ÷ 3,6 = <b>{num(kmh / 3.6)} m/s</b>
+              v₀ = {num(kmh)} ÷ 3,6 = <b>{num(v0)} m/s</b>
+              <br />
+              após {RUN} s: v = {num(v0)} + {nump(accel)} × {nump(tEnd)} = <b>{num(v0 + accel * tEnd)} m/s</b> (
+              {num((v0 + accel * tEnd) * 3.6)} km/h)
             </>
           }
-          onReset={() => setKmh(108)}
+          note="O carro da cena sai com v₀ e acelera (ou freia, se Fat > F) durante 5 s; a régua da pista se ajusta à distância percorrida."
+          onReset={() => {
+            setKmh(0);
+            restart();
+          }}
         />
 
         <QuantityToggles items={Q_LIST} />
@@ -150,27 +188,28 @@ export default function Lesson7NewtonForces2() {
   );
 }
 
-function RaceCar({ playing, resetKey, accel, onUpdate, children }) {
+// Movimento real durante `runTime` s; na tela a pista (15 unidades) representa
+// a distância percorrida nesse tempo (kTrack = unidades da cena por metro).
+function RaceCar({ playing, accel, v0, kTrack, runTime, onUpdate, children }) {
   const ref = useRef();
-  const state = useRef({ x: 0, v: 0, t: 0 });
+  const state = useRef({ x: 0, v: v0, t: 0 });
   const report = useThrottled(onUpdate);
 
   useFrame((_, delta) => {
     if (!playing) return;
     const s = state.current;
-    s.v += accel * delta;
-    s.x += s.v * delta;
-    s.t += delta;
-    if (s.x > 15) {
-      s.x = 15;
-      s.v = 0;
-    }
-    if (ref.current) ref.current.position.x = s.x;
-    report({ v: s.v, x: s.x, t: s.t });
+    if (s.t >= runTime) return;
+    const dt = Math.min(delta, runTime - s.t);
+    s.v += accel * dt;
+    if (s.v < 0) s.v = 0; // freou até parar
+    s.x += s.v * dt;
+    s.t += dt;
+    if (ref.current) ref.current.position.x = Math.min(s.x * kTrack, 15.5);
+    report({ v: s.v, x: s.x, t: s.t }, s.t >= runTime);
   });
 
   return (
-    <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
+    <group ref={ref} position={[0, 0.3, 0]}>
       <Vehicle color="#ef4444" />
       {children}
     </group>

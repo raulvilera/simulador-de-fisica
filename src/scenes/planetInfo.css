@@ -51,9 +51,12 @@
 
 /* solto na tela: sem deslocamento e sem a setinha para o planeta */
 .ppop--pinned {
-  left: 0;
+  position: fixed;
+  z-index: 40;
   transform: none;
   border-color: #7dd3fc;
+  max-height: calc(100dvh - 8px);
+  overflow-y: auto;
 }
 
 .ppop--pinned::before {
