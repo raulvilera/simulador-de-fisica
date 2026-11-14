@@ -395,10 +395,11 @@ export function Pusher({
 // por código: tábuas, moldura e travessa diagonal.
 function useCrateTexture() {
   return useMemo(() => {
-    const size = 512;
+    const size = 512; // desenho em 512, gravado em 1024 px (nítido de perto)
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
+    canvas.width = canvas.height = size * 2;
     const ctx = canvas.getContext("2d");
+    ctx.scale(2, 2);
     let a = 99;
     const rand = () => ((a = (a * 1664525 + 1013904223) >>> 0) / 4294967296);
     const plank = (x, y, w, h, base) => {
@@ -436,7 +437,7 @@ function useCrateTexture() {
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 16; // a placa de vídeo limita ao máximo que suporta
     return tex;
   }, []);
 }

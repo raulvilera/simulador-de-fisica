@@ -25,7 +25,7 @@ function finish(canvas, repeatX = 1, repeatY = 1) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(repeatX, repeatY);
-  tex.anisotropy = 8;
+  tex.anisotropy = 16; // texturas nítidas também de perto e em ângulo
   return tex;
 }
 

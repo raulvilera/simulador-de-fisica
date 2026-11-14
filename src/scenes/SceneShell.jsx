@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, PerformanceMonitor, useProgress, useTexture } from "@react-three/drei";
@@ -64,7 +64,7 @@ export default function SceneShell({
   controlsTarget = [0, 0.5, 0],
   space = false,
   skyBrightness = 1,
-  minDistance = 2,
+  minDistance = 0.6,
   fov = 42,
   maxDistance,
 }) {
@@ -73,9 +73,24 @@ export default function SceneShell({
   // Começa na resolução nativa da tela; só reduz se a placa de vídeo não der conta.
   // No celular a tela é pequena e a GPU é mais fraca: limita a resolução para manter
   // a animação fluida e economizar bateria.
+  // Para a imagem continuar nítida ao aproximar (zoom), a resolução nunca fica
+  // abaixo da nativa da tela (mínimo 1) e pode ir até 2× nas telas de alta densidade.
   const isSmall = window.matchMedia?.("(max-width: 820px), (max-height: 520px)").matches;
-  const maxDpr = Math.min(window.devicePixelRatio || 1, isSmall ? 1.25 : 1.5);
+  const maxDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, isSmall ? 1.75 : 2));
   const [dpr, setDpr] = useState(maxDpr);
+  // Posição inicial da câmera e alvo: usados SÓ na montagem. Antes, cada
+  // atualização dos valores da cena (várias por segundo) reaplicava a posição
+  // inicial e desfazia o zoom do professor.
+  const cameraOpts = useMemo(
+    () => ({ position: cameraPosition, fov, near: 0.02, far: 1200 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const initialTarget = useMemo(
+    () => controlsTarget,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   const Setting = SETTINGS[setting] ?? TrackSetting;
 
   // A área da cena 3D é definida em LessonLayout.css (.scene-frame):
@@ -89,7 +104,7 @@ export default function SceneShell({
       <Canvas
         shadows={!space}
         dpr={dpr}
-        camera={{ position: cameraPosition, fov, near: 0.05, far: 1200 }}
+        camera={cameraOpts}
         gl={{
           antialias: true,
           powerPreference: "high-performance",
@@ -98,7 +113,7 @@ export default function SceneShell({
         }}
       >
         <PerformanceMonitor
-          onDecline={() => setDpr((d) => Math.max(0.8, d - 0.1))}
+          onDecline={() => setDpr((d) => Math.max(1, d - 0.1))}
           onIncline={() => setDpr((d) => Math.min(maxDpr, d + 0.1))}
         />
         <color attach="background" args={[space ? "#02030a" : setting === "lab" ? "#e9e4d6" : "#8fb4dd"]} />
@@ -111,7 +126,7 @@ export default function SceneShell({
             position={SUN_DIR.clone().multiplyScalar(30).toArray()}
             intensity={2.4}
             color="#fff1d8"
-            shadow-mapSize={[1024, 1024]}
+            shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-19}
             shadow-camera-right={19}
             shadow-camera-top={14}
@@ -143,7 +158,7 @@ export default function SceneShell({
 
         <OrbitControls
           makeDefault
-          target={controlsTarget}
+          target={initialTarget}
           enableDamping
           dampingFactor={0.08}
           minDistance={minDistance}

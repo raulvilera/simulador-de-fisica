@@ -137,7 +137,7 @@ function useSrgbTexture(url) {
   const tex = useTexture(url);
   useLayoutEffect(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 16;
     tex.needsUpdate = true;
   }, [tex]);
   return tex;
