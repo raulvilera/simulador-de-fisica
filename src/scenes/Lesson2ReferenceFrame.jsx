@@ -114,7 +114,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
         </Label3D>
         <QuantityTag
           q={Q.vo}
-          position={[0, 2.05, 0]}
+          position={[0, 2.95, 0]}
           value={
             frame === "solo"
               ? `= ${f1(V_OUTRO)} m/s · x = ${num(xO, 1)} m`
@@ -136,7 +136,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           />
           <QuantityTag
             id="entre"
-            position={[(xJ + xO) / 2, 1.25, 0]}
+            position={[(xJ + xO) / 2, 0.15, 2.3]}
             color="#e5e9f5"
             symbol="distância"
             value={`= ${num(Math.abs(xO - xJ), 1)} m`}
