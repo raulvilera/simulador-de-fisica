@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { labelRegistry } from "./LabelLayout.jsx";
 import { create } from "zustand";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -59,6 +60,14 @@ export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, 
   const visible = useConcepts((s) => !key || !s.hidden.has(key));
   const detail = useConcepts((s) => s.detail);
   const [open, setOpen] = useState(false);
+  // registra a etiqueta na organização automática (evita sobreposições)
+  const reg = useCallback((el) => {
+    if (el) labelRegistry.add(el);
+    else
+      for (const e of labelRegistry) {
+        if (!e.isConnected) labelRegistry.delete(e);
+      }
+  }, []);
   if (!visible) return null;
   color = color ?? q?.color;
   symbol = symbol ?? q?.symbol;
@@ -68,10 +77,12 @@ export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, 
   return (
     <Html position={position} center zIndexRange={[2, 0]}>
       <div
+        ref={reg}
         className={`qtag${expanded ? " is-open" : ""}`}
         style={{ "--qc": color }}
         onPointerDown={(e) => e.stopPropagation()}
       >
+        <span className="qtag__leader" aria-hidden="true" />
         <button
           type="button"
           className="qtag__main"
@@ -156,7 +167,7 @@ export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, fl
   });
 
   return (
-    <group ref={root} position={[0, y, z]}>
+    <group ref={root} position={[0, y, z]} userData={{ noProtect: true }}>
       <mesh ref={shaft} rotation={[flat ? -Math.PI / 2 : 0, 0, 0]} renderOrder={2}>
         <planeGeometry args={[1, width]} />
         <meshBasicMaterial

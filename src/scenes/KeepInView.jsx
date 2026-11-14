@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
+import { protectedRegistry } from "./LabelLayout.jsx";
 
 const v = new THREE.Vector3();
 const c = new THREE.Vector3();
@@ -23,6 +24,15 @@ export default function KeepInView({ targets, enabled = true, edgesOnly = false,
   const busy = useRef(false);
   const baseDist = useRef(null); // distância inicial da câmera (para voltar a ela)
   const userZoom = useRef(false);
+
+  // os objetos acompanhados também não podem ser cobertos pelas etiquetas
+  useEffect(() => {
+    for (const t of targets) protectedRegistry.add(t);
+    return () => {
+      for (const t of targets) protectedRegistry.delete(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!controls) return undefined;

@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Line, useTexture } from "@react-three/drei";
 import { Label3D } from "./primitives.jsx";
 import { useConcepts } from "./quantities.jsx";
+import { useProtected } from "./LabelLayout.jsx";
 
 // Peças reutilizáveis das cenas de Astronomia (Aulas 10 a 20). Tudo é gerado
 // por código (sem fotos/texturas baixadas), então funciona offline como as
@@ -185,6 +186,7 @@ export function Sun({ position = [0, 0, 0], radius = 1, color = "#ffc94d", inten
   const map = useSrgbTexture(TEX("sun.jpg"));
   const ref = useRef();
   const tint = useMemo(() => new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.55).multiplyScalar(1.5), [color]);
+  useProtected(ref); // as etiquetas não cobrem o Sol
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * 0.03;
   });
@@ -239,11 +241,13 @@ export function Earth({ radius = 0.5, ...props }) {
   const map = useSrgbTexture(TEX("earth_daymap.jpg"));
   const clouds = useTexture(TEX("earth_clouds.jpg"));
   const cloudRef = useRef();
+  const body = useRef();
+  useProtected(body); // as etiquetas não cobrem a Terra
   useFrame((_, delta) => {
     if (cloudRef.current) cloudRef.current.rotation.y += delta * 0.02;
   });
   return (
-    <group {...props}>
+    <group ref={body} {...props}>
       <mesh>
         <sphereGeometry args={[radius, 64, 40]} />
         <meshStandardMaterial map={map} roughness={0.7} metalness={0.05} />
@@ -303,8 +307,10 @@ function SaturnRing({ radius }) {
 export function Planet({ radius = 0.3, color = "#9aa3b8", bands, ring, emissive = 0, onClick, children }) {
   const file = TEXTURE_BY_COLOR[String(color).toLowerCase()];
   const fallbackMap = useBandTexture(file ? null : bands);
+  const body = useRef();
+  useProtected(body); // as etiquetas não cobrem o planeta
   return (
-    <group>
+    <group ref={body}>
       {file ? (
         <TexturedBody
           file={file}

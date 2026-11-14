@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useThrottled } from "./useThrottled.js";
 import SceneShell from "./SceneShell.jsx";
 import KeepInView from "./KeepInView.jsx";
+import { useProtected } from "./LabelLayout.jsx";
 import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
@@ -297,6 +298,7 @@ const PushedBox = memo(function PushedBox({
   const people = useRef();
   const state = useRef({ x: 0, v: 0, t: 0, coast: 0, done: false, ended: false });
   const report = useThrottled(onMeasure);
+  useProtected(crate, people); // etiquetas não cobrem o caixote nem as pessoas
   const vEnd = Math.abs(accel) * pushTime;
   const travel = 0.5 * Math.abs(accel) * pushTime * pushTime + vEnd * COAST; // metros reais
   const kVis = travel > 9 ? 9 / travel : 1;
