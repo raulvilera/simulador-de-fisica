@@ -4,6 +4,8 @@ import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag, Sun, Planet, Earth, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+import { PlanetPopup, SunDistanceArrow } from "./planetInfo.jsx";
+import { PLANET_INFO, fmtDist } from "../data/planets.js";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -35,28 +37,61 @@ const PLANETS = [
     fact: "O mais distante do Sol. Gigante gelado com ventos de até 2 000 km/h, entre os mais rápidos do Sistema Solar." },
 ];
 
-function Orbiting({ planet, index, speed, selected, onSelect }) {
-  const ref = useRef();
+const SUN_R = 0.9;
+
+// O planeta gira num "pivô" no centro do Sol: assim a seta Sol → planeta
+// (presa ao pivô) acompanha o planeta sozinha.
+function Orbiting({ planet, index, speed, selected, popup, onSelect, onClose }) {
+  const pivot = useRef();
+  const body = useRef();
   const angle = useRef(index * 0.9);
   useFrame((_, delta) => {
     angle.current += (delta * speed * 0.25) / planet.years;
-    ref.current?.position.set(Math.cos(angle.current) * planet.orbit, 0, Math.sin(angle.current) * planet.orbit);
+    if (pivot.current) pivot.current.rotation.y = -angle.current;
+    if (body.current) body.current.rotation.y = angle.current; // o planeta não gira junto com o pivô
   });
+  const click = (e) => {
+    if (e.delta > 6) return; // arrasto da câmera
+    e.stopPropagation();
+    onSelect();
+  };
   return (
-    <group ref={ref}>
-      {planet.name === "Terra" ? (
-        <Earth radius={planet.size} onClick={onSelect} />
-      ) : (
-        <Planet radius={planet.size} color={planet.color} bands={planet.bands} ring={planet.ring} onClick={onSelect} />
-      )}
-      <Tag position={[0, planet.size + 0.35, 0]} color={selected ? "#fde68a" : "#aab3cf"} size={selected ? 0.34 : 0.24}>
-        {planet.name}
-      </Tag>
-      {selected && (
-        <>
-          <QuantityTag q={Q.tipo} position={[0, planet.size + 1.25, 0]} value={planet.type} />
-          <QuantityTag q={Q.translacao} position={[0, -planet.size - 0.7, 0]} value={planet.period} />
-        </>
+    <group ref={pivot}>
+      <group position={[planet.orbit, 0, 0]}>
+        <group ref={body}>
+          {/* área de toque maior que o planeta (os pequenos ficam fáceis de clicar) */}
+          <mesh
+            onClick={click}
+            onPointerOver={() => (document.body.style.cursor = "pointer")}
+            onPointerOut={() => (document.body.style.cursor = "")}
+          >
+            <sphereGeometry args={[Math.max(planet.size * 1.5, 0.4), 16, 12]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+          {planet.name === "Terra" ? (
+            <Earth radius={planet.size} onClick={click} />
+          ) : (
+            <Planet radius={planet.size} color={planet.color} bands={planet.bands} ring={planet.ring} onClick={click} />
+          )}
+          <Tag
+            id={`nome:${planet.name}`}
+            position={[0, planet.size + 0.35, 0]}
+            color={selected ? "#fde68a" : "#e5e9f5"}
+            size={selected ? 0.36 : 0.28}
+          >
+            {planet.name}
+          </Tag>
+          {selected && !popup && (
+            <>
+              <QuantityTag q={Q.tipo} position={[0, planet.size + 1.25, 0]} value={planet.type} />
+              <QuantityTag q={Q.translacao} position={[0, -planet.size - 0.7, 0]} value={PLANET_INFO[planet.name].translation} />
+            </>
+          )}
+          {selected && popup && <PlanetPopup name={planet.name} offset={planet.size} onClose={onClose} />}
+        </group>
+      </group>
+      {selected && popup && (
+        <SunDistanceArrow name={planet.name} from={SUN_R + 0.08} to={planet.orbit - planet.size - 0.08} />
       )}
     </group>
   );
@@ -64,6 +99,11 @@ function Orbiting({ planet, index, speed, selected, onSelect }) {
 
 export default function Lesson12Planets() {
   const [sel, setSel] = useState(2);
+  const [popup, setPopup] = useState(false);
+  const open = (i) => {
+    setSel(i);
+    setPopup(true);
+  };
   const [speed, setSpeed] = useState(2);
   const [orbits, setOrbits] = useState(true);
   const p = PLANETS[sel];
@@ -72,7 +112,7 @@ export default function Lesson12Planets() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 14, 24]} controlsTarget={[0, 0, 0]} maxDistance={40}>
         <Sun radius={0.9} />
-        <QuantityTag q={Q.estrela} position={[0, 1.7, 0]} />
+        {!popup && <QuantityTag q={Q.estrela} position={[0, 1.7, 0]} />}
         <QuantityTag q={Q.cinturao} position={[0, 0.3, 5.45]} />
         {PLANETS.map((pl, i) => (
           <group key={pl.name}>
@@ -83,7 +123,7 @@ export default function Lesson12Planets() {
                 lineWidth={i === sel ? 2 : 1}
               />
             )}
-            <Orbiting planet={pl} index={i} speed={speed} selected={i === sel} onSelect={() => setSel(i)} />
+            <Orbiting planet={pl} index={i} speed={speed} selected={i === sel} popup={popup} onSelect={() => open(i)} onClose={() => setPopup(false)} />
           </group>
         ))}
       </SceneShell>
@@ -96,7 +136,7 @@ export default function Lesson12Planets() {
                 key={pl.name}
                 className={`btn ${i === sel ? "btn--primary" : "btn--ghost"}`}
                 style={{ padding: "8px 6px", fontSize: "0.78rem" }}
-                onClick={() => setSel(i)}
+                onClick={() => open(i)}
               >
                 {pl.name}
               </button>
@@ -107,9 +147,11 @@ export default function Lesson12Planets() {
           <Readout
             items={[
               { label: "Tipo", value: p.type },
-              { label: "Volta ao redor do Sol", value: p.period },
-              { label: "Luas", value: p.moons },
-              { label: "Distância do Sol (milhões de km)", value: p.dist },
+              { label: "Temperatura", value: PLANET_INFO[p.name].temp },
+              { label: "Translação", value: PLANET_INFO[p.name].translation },
+              { label: "Rotação", value: PLANET_INFO[p.name].rotation },
+              { label: "Satélites naturais", value: PLANET_INFO[p.name].moons },
+              { label: "Distância do Sol", value: fmtDist(PLANET_INFO[p.name]) },
             ]}
           />
         </div>
@@ -120,7 +162,8 @@ export default function Lesson12Planets() {
         <Note>
           Rochosos (Mercúrio, Vênus, Terra e Marte) são formados principalmente por material sólido
           e ficam mais perto do Sol. Gasosos (Júpiter, Saturno, Urano e Netuno) são muito maiores e
-          ficam além de Marte e do cinturão de asteroides. Clique em um planeta para selecioná-lo.
+          ficam além de Marte e do cinturão de asteroides. Clique em um planeta para ver as características dele e a
+          distância até o Sol.
           Tamanhos e distâncias fora de escala.
         </Note>
       </Panel>

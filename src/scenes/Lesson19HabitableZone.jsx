@@ -32,6 +32,18 @@ function waterState(t) {
   return { label: "Líquida", color: "#2f7de0" };
 }
 
+// Nome do planeta real que fica nessa distância (ou "planeta hipotético")
+const REAL = [
+  ["Mercúrio", 0.39],
+  ["Vênus", VENUS],
+  ["Terra", 1],
+  ["Marte", MARS],
+];
+function nearestName(dist) {
+  const hit = REAL.find(([, d]) => Math.abs(d - dist) <= 0.06);
+  return hit ? hit[0] : `planeta hipotético (${dist.toFixed(2).replace(".", ",")} UA)`;
+}
+
 function OrbitingPlanet({ dist, color, greenhouse, children }) {
   const ref = useRef();
   const angle = useRef(0.6);
@@ -51,7 +63,9 @@ function OrbitingPlanet({ dist, color, greenhouse, children }) {
           <meshBasicMaterial color="#9bd4ff" transparent opacity={0.22} depthWrite={false} />
         </mesh>
       )}
-      <Tag position={[0, 0.8, 0]}>planeta</Tag>
+      <Tag id="nome:planeta19" position={[0, 0.8, 0]}>
+        {nearestName(dist)}
+      </Tag>
       {children}
     </group>
   );

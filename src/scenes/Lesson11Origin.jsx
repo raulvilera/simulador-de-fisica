@@ -4,6 +4,8 @@ import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Sun, Planet, Tag } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+import { PlanetPopup, SunDistanceArrow } from "./planetInfo.jsx";
+import { PLANET_ORDER } from "../data/planets.js";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -76,7 +78,7 @@ function Expansion({ time }) {
 
 // Formação do Sistema Solar: nuvem (nebulosa) → contração e rotação → disco de
 // acreção → Sol no centro e planetas na parte externa do disco.
-function Formation({ time, children }) {
+function Formation({ time, selected, onSelect, children }) {
   const geo = useRef();
   const spin = useRef();
   const p = time / 100;
@@ -105,7 +107,8 @@ function Formation({ time, children }) {
       for (let i = 0; i < N * 3; i++) attr.array[i] = cloud[i] + (disk[i] - cloud[i]) * e;
       attr.needsUpdate = true;
     }
-    if (spin.current) spin.current.rotation.y += delta * (0.05 + e * 0.5);
+    // com um planeta aberto, o disco quase para, para dar tempo de ler
+    if (spin.current) spin.current.rotation.y += delta * (0.05 + e * 0.5) * (selected ? 0.06 : 1);
   });
 
   const sunScale = Math.max(0, Math.min(1, (p - 0.4) / 0.3));
@@ -126,11 +129,41 @@ function Formation({ time, children }) {
         </group>
       )}
       {planetScale > 0 &&
-        PLANETS.map((pl, i) => (
-          <group key={i} position={[Math.cos(i * 2.4) * pl.r, 0, Math.sin(i * 2.4) * pl.r]} scale={planetScale}>
-            <Planet radius={pl.size} color={pl.color} emissive={0.25} />
-          </group>
-        ))}
+        PLANETS.map((pl, i) => {
+          const name = PLANET_ORDER[i];
+          const ang = i * 2.4;
+          const isSel = selected === name && planetScale >= 1;
+          const click = (e) => {
+            if (e.delta > 6) return;
+            e.stopPropagation();
+            onSelect(name);
+          };
+          return (
+            // pivô no centro: a seta Sol → planeta fica no eixo +X do grupo girado
+            <group key={i} rotation={[0, -ang, 0]}>
+              <group position={[pl.r, 0, 0]} scale={planetScale}>
+                <group rotation={[0, ang, 0]}>
+                  <Planet radius={pl.size} color={pl.color} emissive={0.25} onClick={click} />
+                  <mesh
+                    onClick={click}
+                    onPointerOver={() => (document.body.style.cursor = "pointer")}
+                    onPointerOut={() => (document.body.style.cursor = "")}
+                  >
+                    <sphereGeometry args={[Math.max(pl.size * 1.6, 0.35), 16, 12]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                  </mesh>
+                  {planetScale >= 1 && (
+                    <Tag id={`nome:${name}`} position={[0, pl.size + 0.32, 0]} size={isSel ? 0.32 : 0.26} color={isSel ? "#fde68a" : "#e5e9f5"}>
+                      {name}
+                    </Tag>
+                  )}
+                  {isSel && <PlanetPopup name={name} offset={pl.size} onClose={() => onSelect(null)} />}
+                </group>
+              </group>
+              {isSel && <SunDistanceArrow name={name} from={0.88} to={pl.r - pl.size - 0.06} />}
+            </group>
+          );
+        })}
       {children}
     </group>
   );
@@ -152,6 +185,7 @@ export default function Lesson11Origin() {
   const [mode, setMode] = useState("universe");
   const [time, setTime] = useState(100);
   const [dir, setDir] = useState(0); // 1 avança, -1 volta, 0 parado
+  const [selPlanet, setSelPlanet] = useState(null);
 
   return (
     <div className="lesson__canvas">
@@ -160,8 +194,10 @@ export default function Lesson11Origin() {
         {mode === "universe" ? (
           <Expansion time={time} />
         ) : (
-          <Formation time={time}>
-            {time >= 75 && <QuantityTag q={Q.planetas} position={[PLANET_TAG[0], 0.9, PLANET_TAG[2]]} />}
+          <Formation time={time} selected={selPlanet} onSelect={setSelPlanet}>
+            {time >= 75 && !selPlanet && (
+              <QuantityTag q={Q.planetas} position={[PLANET_TAG[0], -1.3, PLANET_TAG[2]]} name="clique em um planeta para ver as características" />
+            )}
           </Formation>
         )}
         {mode === "universe" && time < 4 && <Tag position={[0, 1.2, 0]}>toda a matéria reunida</Tag>}
@@ -172,7 +208,7 @@ export default function Lesson11Origin() {
         {mode === "solar" && time < 45 && <QuantityTag q={Q.nebulosa} position={[4.5, 3.5, 0]} />}
         {mode === "solar" && time >= 15 && time < 60 && <QuantityTag q={Q.gravidade} position={[-4.5, 2.6, 0]} />}
         {mode === "solar" && time >= 45 && time < 80 && <QuantityTag q={Q.disco} position={[6, 0.9, 1.5]} />}
-        {mode === "solar" && time >= 55 && <QuantityTag q={Q.sol} position={[0, 1.9, 0]} />}
+        {mode === "solar" && time >= 55 && !selPlanet && <QuantityTag q={Q.sol} position={[0, 1.9, 0]} />}
       </SceneShell>
 
       <Panel eyebrow="Aula 11 · Origens" title="Do Big Bang ao Sistema Solar">
@@ -205,6 +241,23 @@ export default function Lesson11Origin() {
             ]}
           />
         </div>
+        {mode === "solar" && time >= 75 && (
+          <div className="panel__section">
+            <h3>Ver as características</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {PLANET_ORDER.map((n) => (
+                <button
+                  key={n}
+                  className={`btn ${selPlanet === n ? "btn--primary" : "btn--ghost"}`}
+                  style={{ padding: "7px 6px", fontSize: "0.78rem" }}
+                  onClick={() => setSelPlanet(selPlanet === n ? null : n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <QuantityToggles items={mode === "universe" ? Q_UNIVERSE : Q_SOLAR} />
         {mode === "universe" ? (
           <Note>
