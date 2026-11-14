@@ -1,0 +1,129 @@
+.ppop {
+  position: absolute;
+  left: var(--off, 30px);
+  top: 0;
+  transform: translateY(-50%);
+  width: 250px;
+  padding: 10px 12px 9px;
+  border-radius: 12px;
+  background: rgba(8, 11, 22, 0.94);
+  border: 1px solid rgba(253, 230, 138, 0.55);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+  color: #e5e9f5;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  pointer-events: auto;
+  user-select: none;
+}
+
+/* setinha apontando para o planeta */
+.ppop::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: calc(50% - 7px);
+  border: 7px solid transparent;
+  border-left: none;
+  border-right-color: rgba(253, 230, 138, 0.55);
+}
+
+.ppop__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ppop__head b {
+  font-size: 1.02rem;
+  color: #fde68a;
+}
+
+.ppop__class {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ppop__class--rock {
+  background: rgba(209, 96, 61, 0.25);
+  color: #fdba74;
+  border: 1px solid #c2703d;
+}
+
+.ppop__class--gas {
+  background: rgba(79, 111, 224, 0.25);
+  color: #a5b4fc;
+  border: 1px solid #4f6fe0;
+}
+
+.ppop__close {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e9f5;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ppop__classText {
+  margin: 6px 0 8px;
+  color: #b8c0dc;
+  font-size: 0.72rem;
+}
+
+.ppop__list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  margin: 0;
+}
+
+.ppop__list dt {
+  color: #8891b5;
+  white-space: nowrap;
+}
+
+.ppop__list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ppop__foot {
+  margin: 8px 0 0;
+  font-size: 0.66rem;
+  color: #6b7499;
+}
+
+.pdist {
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--c);
+  background: rgba(8, 11, 22, 0.86);
+  color: #f1f3fb;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.pdist b {
+  color: var(--c);
+  font-family: "Cambria Math", "STIX Two Math", serif;
+}
+
+@media (max-width: 820px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+  .ppop {
+    width: 200px;
+    font-size: 0.7rem;
+    padding: 8px 9px;
+  }
+  .ppop__classText {
+    display: none;
+  }
+}
