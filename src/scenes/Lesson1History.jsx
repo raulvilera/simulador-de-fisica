@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
@@ -64,7 +65,7 @@ function model(theory, h, g) {
   };
 }
 
-function FallingBalls({ dropping, theory, onLanded, onTick, h, g, live }) {
+function FallingBalls({ objRef, dropping, theory, onLanded, onTick, h, g, live }) {
   const heavyRef = useRef();
   const lightRef = useRef();
   const t = useRef(0);
@@ -112,7 +113,13 @@ function FallingBalls({ dropping, theory, onLanded, onTick, h, g, live }) {
           name={theory === "aristoteles" ? `esfera pesada (${WEIGHT_RATIO}× o peso)` : "esfera pesada"}
         />
       </group>
-      <group ref={lightRef} position={[0.6, Math.max(h * k, 0.3), BALL_Z]}>
+      <group
+        ref={(o) => {
+          lightRef.current = o;
+          if (objRef) objRef.current = o;
+        }}
+        position={[0.6, Math.max(h * k, 0.3), BALL_Z]}
+      >
         <Ball position={[0, 0, 0]} color="#38bdf8" radius={R_LIGHT} />
         <QuantityTag id="m" position={[1.0, 0.1, 0]} color="#38bdf8" symbol="m menor" name="esfera leve" />
         {live && live.t > 0 && live.y > 0.05 && (
@@ -237,7 +244,7 @@ function Tower() {
     const mesh = new THREE.InstancedMesh(
       new THREE.CylinderGeometry(0.045, 0.05, 0.92, 8),
       new THREE.MeshStandardMaterial({ color: "#f1ece0", roughness: 0.55 }),
-      LEVELS * COLS
+      LEVELS * COLS,
     );
     let i = 0;
     for (let l = 0; l < LEVELS; l++) {
@@ -291,6 +298,7 @@ function Tower() {
 }
 
 export default function Lesson1History() {
+  const followRef = useRef(); // esfera que a câmera acompanha
   const [dropping, setDropping] = useState(false);
   const [theory, setTheory] = useState("galileu"); // "galileu" | "aristoteles"
   const aristotleMode = theory === "aristoteles";
@@ -332,8 +340,15 @@ export default function Lesson1History() {
       <SceneShell setting="pisa" cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
         <Tower />
         <GalileoOnTop />
-        <QuantityTag q={Q.gal} position={[0, 10.45, -0.55]} name="no alto da torre (escala real: 1 pessoa ≈ 0,3 da cena)" />
+        <QuantityTag
+          q={Q.gal}
+          position={[0, 10.45, -0.55]}
+          name="no alto da torre (escala real: 1 pessoa ≈ 0,3 da cena)"
+        />
+        {/* a câmera acompanha a esfera até o chão */}
+        <KeepInView targets={[followRef]} axes={[0, 1, 0]} margin={0.8} />
         <FallingBalls
+          objRef={followRef}
           key={`${resetKey}-${hC}-${gC}-${theory}`}
           dropping={dropping}
           theory={theory}
@@ -366,24 +381,39 @@ export default function Lesson1History() {
           position={[-3.6, 6.3, 0]}
           symbol={aristotleMode ? "v ∝ peso" : "g"}
           value={aristotleMode ? "sem aceleração" : `= ${num(gC)} m/s²`}
-          name={aristotleMode ? "Aristóteles: o mais pesado cai mais rápido (errado)" : "Galileu: igual para as duas massas"}
+          name={
+            aristotleMode ? "Aristóteles: o mais pesado cai mais rápido (errado)" : "Galileu: igual para as duas massas"
+          }
         />
 
         <QuantityTag
           q={Q.ar}
           position={[-4.1, 3.4, 0]}
           value={aristotleMode ? "o meio resiste" : "desprezada"}
-          name={aristotleMode ? "para Aristóteles, sem meio (vácuo) a queda seria instantânea" : "sem ar, pena e martelo caem juntos"}
+          name={
+            aristotleMode
+              ? "para Aristóteles, sem meio (vácuo) a queda seria instantânea"
+              : "sem ar, pena e martelo caem juntos"
+          }
         />
 
         {!landTime && live.t > 0 && (
-          <QuantityTag q={Q.t} position={[0, 1.4, 1.4]} value={`= ${num(live.t)} s`} name="cronômetro da queda (tempo real)" />
+          <QuantityTag
+            q={Q.t}
+            position={[0, 1.4, 1.4]}
+            value={`= ${num(live.t)} s`}
+            name="cronômetro da queda (tempo real)"
+          />
         )}
         {landTime && (
           <QuantityTag
             q={Q.t}
             position={[0, 1.4, 1.4]}
-            value={aristotleMode ? `pesada ${num(landTime.heavy)} s · leve ${num(landTime.light)} s` : `= ${num(landTime.light)} s`}
+            value={
+              aristotleMode
+                ? `pesada ${num(landTime.heavy)} s · leve ${num(landTime.light)} s`
+                : `= ${num(landTime.light)} s`
+            }
             name={aristotleMode ? "a pesada chegou antes (modelo de Aristóteles)" : "as duas chegam juntas ao chão"}
           />
         )}
@@ -412,10 +442,16 @@ export default function Lesson1History() {
           <div className="controls__row">
             <span>Teoria</span>
             <div className="btnRow" style={{ marginTop: 0 }}>
-              <button className={`btn ${aristotleMode ? "btn--primary" : "btn--ghost"}`} onClick={() => pick("aristoteles")}>
+              <button
+                className={`btn ${aristotleMode ? "btn--primary" : "btn--ghost"}`}
+                onClick={() => pick("aristoteles")}
+              >
                 Aristóteles
               </button>
-              <button className={`btn ${!aristotleMode ? "btn--primary" : "btn--ghost"}`} onClick={() => pick("galileu")}>
+              <button
+                className={`btn ${!aristotleMode ? "btn--primary" : "btn--ghost"}`}
+                onClick={() => pick("galileu")}
+              >
                 Galileu
               </button>
             </div>
@@ -442,25 +478,66 @@ export default function Lesson1History() {
           terms={
             aristotleMode
               ? [
-                  { symbol: "v", name: "velocidade de queda: constante, proporcional ao peso (ideia errada)", unit: "m/s", color: Q.vq.color },
+                  {
+                    symbol: "v",
+                    name: "velocidade de queda: constante, proporcional ao peso (ideia errada)",
+                    unit: "m/s",
+                    color: Q.vq.color,
+                  },
                   { symbol: "h", name: "altura de onde o corpo é solto", unit: "m", color: Q.h.color },
-                  { symbol: "t", name: `tempo: a leve (metade do peso) levaria ${WEIGHT_RATIO}× mais`, unit: "s", color: Q.t.color },
+                  {
+                    symbol: "t",
+                    name: `tempo: a leve (metade do peso) levaria ${WEIGHT_RATIO}× mais`,
+                    unit: "s",
+                    color: Q.t.color,
+                  },
                 ]
               : [
                   { symbol: "t", name: "tempo de queda: não depende da massa", unit: "s", color: Q.t.color },
                   { symbol: "h", name: "altura de onde o corpo é solto", unit: "m", color: Q.h.color },
-                  { symbol: "g", name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)", unit: "m/s²", color: Q.g.color },
+                  {
+                    symbol: "g",
+                    name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)",
+                    unit: "m/s²",
+                    color: Q.g.color,
+                  },
                 ]
           }
           inputs={[
-            { key: "h", symbol: "h", unit: "m", value: hC, onChange: (v) => { setHC(v); reset(); }, min: 0.01, max: 1e9, color: Q.h.color },
-            { key: "g", symbol: "g", unit: "m/s²", value: gC, onChange: (v) => { setGC(v); reset(); }, min: 0.001, max: 1e9, color: Q.g.color },
+            {
+              key: "h",
+              symbol: "h",
+              unit: "m",
+              value: hC,
+              onChange: (v) => {
+                setHC(v);
+                reset();
+              },
+              min: 0.01,
+              max: 1e9,
+              color: Q.h.color,
+            },
+            {
+              key: "g",
+              symbol: "g",
+              unit: "m/s²",
+              value: gC,
+              onChange: (v) => {
+                setGC(v);
+                reset();
+              },
+              min: 0.001,
+              max: 1e9,
+              color: Q.g.color,
+            },
           ]}
           steps={
             aristotleMode ? (
               <>
-                pesada: t = {num(Math.sqrt((2 * hC) / gC))} s · leve (metade do peso): <b>{num(WEIGHT_RATIO * Math.sqrt((2 * hC) / gC))} s</b>
-                <br />previsão que o experimento NÃO confirma
+                pesada: t = {num(Math.sqrt((2 * hC) / gC))} s · leve (metade do peso):{" "}
+                <b>{num(WEIGHT_RATIO * Math.sqrt((2 * hC) / gC))} s</b>
+                <br />
+                previsão que o experimento NÃO confirma
               </>
             ) : (
               <>
@@ -474,13 +551,15 @@ export default function Lesson1History() {
               aristotleMode ? (
                 <>
                   t = <b>{num(live.t)} s</b> · esfera leve com v constante = <b>{num(live.v, 1)} m/s</b>
-                  <br />altura: pesada {num(Math.max(live.yH ?? 0, 0), 1)} m · leve <b>{num(Math.max(live.y, 0), 1)} m</b>
+                  <br />
+                  altura: pesada {num(Math.max(live.yH ?? 0, 0), 1)} m · leve <b>{num(Math.max(live.y, 0), 1)} m</b>
                 </>
               ) : (
                 <>
                   t = <b>{num(live.t)} s</b>
                   <br />v = g · t = {num(gC)} × {nump(live.t)} = <b>{num(live.v, 1)} m/s</b>
-                  <br />já caiu: ½ · g · t² = <b>{num(live.fall, 1)} m</b> · falta: {num(Math.max(live.y, 0), 1)} m
+                  <br />
+                  já caiu: ½ · g · t² = <b>{num(live.fall, 1)} m</b> · falta: {num(Math.max(live.y, 0), 1)} m
                 </>
               )
             ) : (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useThrottled } from "./useThrottled.js";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
@@ -20,6 +21,7 @@ const Q_LIST = Object.values(Q);
 const f2d = (v) => v.toFixed(2).replace(".", ",");
 
 export default function Lesson6NewtonForces() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [mass, setMass] = useState(40); // kg
   const [f1, setF1] = useState(15); // N (sentido +)
   const [f2, setF2] = useState(25); // N (sentido +, ou negativo se oposto)
@@ -35,7 +37,10 @@ export default function Lesson6NewtonForces() {
   return (
     <div className="lesson__canvas">
       <SceneShell setting="yard" fov={50} cameraPosition={[-0.6, 2.7, 9]} controlsTarget={[-1.2, 1.3, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         <PushedBox
+          objRef={followRef}
           key={`${resetKey}-${dtA}-${accel}`}
           playing={playing}
           accel={accel}
@@ -91,13 +96,32 @@ export default function Lesson6NewtonForces() {
             </>
           }
           terms={[
-            { symbol: "FRes", name: "força resultante: soma das forças (sentidos opostos se subtraem)", unit: "N", color: Q.fres.color },
+            {
+              symbol: "FRes",
+              name: "força resultante: soma das forças (sentidos opostos se subtraem)",
+              unit: "N",
+              color: Q.fres.color,
+            },
             { symbol: "m", name: "massa: quantidade de matéria do corpo (inércia)", unit: "kg", color: Q.m.color },
-            { symbol: "a", name: "aceleração: quanto a velocidade muda a cada segundo", unit: "m/s²", color: Q.a.color },
+            {
+              symbol: "a",
+              name: "aceleração: quanto a velocidade muda a cada segundo",
+              unit: "m/s²",
+              color: Q.a.color,
+            },
             { symbol: "F1, F2", name: "forças aplicadas pelas pessoas", unit: "N", color: Q.f1.color },
           ]}
           inputs={[
-            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.001, max: 1e12, color: Q.m.color },
+            {
+              key: "m",
+              symbol: "m",
+              unit: "kg",
+              value: mass,
+              onChange: setMass,
+              min: 0.001,
+              max: 1e12,
+              color: Q.m.color,
+            },
             { key: "f1", symbol: "F1", unit: "N", value: f1, onChange: setF1, min: 0, max: 1e12, color: Q.f1.color },
             { key: "f2", symbol: "F2", unit: "N", value: f2, onChange: setF2, min: 0, max: 1e12, color: Q.f2.color },
           ]}
@@ -112,7 +136,8 @@ export default function Lesson6NewtonForces() {
               <>
                 t = <b>{num(meas.t)} s</b> {meas.done ? "(as pessoas pararam de empurrar)" : "empurrando"}
                 <br />v = a · t = {num(accel)} × {nump(meas.t)} = <b>{num(meas.v)} m/s</b>
-                <br />deslocamento = ½ · a · t² = <b>{num(0.5 * accel * Math.min(meas.t, dtA) ** 2, 1)} m</b>
+                <br />
+                deslocamento = ½ · a · t² = <b>{num(0.5 * accel * Math.min(meas.t, dtA) ** 2, 1)} m</b>
                 {meas.done && <> + depois {num(meas.x - 0.5 * accel * dtA * dtA, 1)} m sem força (inércia)</>}
               </>
             ) : (
@@ -133,17 +158,36 @@ export default function Lesson6NewtonForces() {
           formula={<>a = ΔV ÷ Δt</>}
           terms={[
             { symbol: "a", name: "aceleração média", unit: "m/s²", color: Q.a.color },
-            { symbol: "ΔV", name: "variação da velocidade = V final − V inicial (medida na cena)", unit: "m/s", color: "#38bdf8" },
+            {
+              symbol: "ΔV",
+              name: "variação da velocidade = V final − V inicial (medida na cena)",
+              unit: "m/s",
+              color: "#38bdf8",
+            },
             { symbol: "Δt", name: "tempo que as pessoas empurram o caixote", unit: "s", color: "#a78bfa" },
           ]}
           inputs={[
-            { key: "dt", symbol: "Δt", unit: "s", value: dtA, onChange: (v) => { setDtA(v); setPlaying(false); setResetKey((k) => k + 1); }, min: 0.001, max: 1e9, color: "#a78bfa" },
+            {
+              key: "dt",
+              symbol: "Δt",
+              unit: "s",
+              value: dtA,
+              onChange: (v) => {
+                setDtA(v);
+                setPlaying(false);
+                setResetKey((k) => k + 1);
+              },
+              min: 0.001,
+              max: 1e9,
+              color: "#a78bfa",
+            },
           ]}
           steps={
             meas.t > 0 ? (
               <>
                 ΔV = {num(meas.v)} − 0 = {num(meas.v)} m/s {meas.done ? "" : `(empurrando… ${num(meas.t, 1)} s)`}
-                <br />a = {num(meas.v)} ÷ {nump(meas.done ? dtA : meas.t)} = <b>{num(meas.done ? meas.v / dtA : accel)} m/s²</b>
+                <br />a = {num(meas.v)} ÷ {nump(meas.done ? dtA : meas.t)} ={" "}
+                <b>{num(meas.done ? meas.v / dtA : accel)} m/s²</b>
                 <br />
                 <span style={{ opacity: 0.8 }}>igual a FRes ÷ m = {num(accel)} m/s² ✓</span>
               </>
@@ -160,11 +204,11 @@ export default function Lesson6NewtonForces() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          2ª Lei de Newton: F<sub>Res</sub> = m·a. Quando as forças têm sentidos opostos, a
-          resultante é a diferença entre elas. A 3ª Lei (ação e reação) aparece, por exemplo, nos pés
-          de quem empurra o caixote: ao empurrar o chão para trás, o chão empurra a pessoa para
-          frente — mas essas forças atuam em corpos diferentes, por isso não se anulam. Na cena, a
-          pessoa de azul aplica F1, a de vermelho aplica F2 e a seta amarela mostra a resultante.
+          2ª Lei de Newton: F<sub>Res</sub> = m·a. Quando as forças têm sentidos opostos, a resultante é a diferença
+          entre elas. A 3ª Lei (ação e reação) aparece, por exemplo, nos pés de quem empurra o caixote: ao empurrar o
+          chão para trás, o chão empurra a pessoa para frente — mas essas forças atuam em corpos diferentes, por isso
+          não se anulam. Na cena, a pessoa de azul aplica F1, a de vermelho aplica F2 e a seta amarela mostra a
+          resultante.
         </p>
       </div>
     </div>
@@ -183,7 +227,7 @@ const arrowLen = (f) => Math.min(Math.max(Math.abs(f) * SCALE, 0.45), 5);
 // velocidade que ganhou (sem atrito). O deslocamento mostrado é comprimido
 // quando seria grande demais para o galpão, e empurrões longos são acelerados
 // na tela — os valores medidos (v, t) são sempre os reais.
-function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure, meas }) {
+function PushedBox({ objRef, playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure, meas }) {
   const ref = useRef();
   const state = useRef({ x: 0, v: 0, t: 0, done: false });
   const report = useThrottled(onMeasure);
@@ -219,7 +263,13 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
 
   const side2 = opposite ? 1 : -1; // lado do caixote onde fica quem aplica F2
   return (
-    <group ref={ref} position={[START_X, 0, 0]}>
+    <group
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[START_X, 0, 0]}
+    >
       <Crate size={HALF * 2} />
 
       {/* pessoa de azul: aplica F1 para a direita */}
@@ -257,16 +307,20 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
         <QuantityTag
           q={Q.f2}
           position={
-            opposite
-              ? [-HALF - 0.08 - arrowLen(f2) - 0.55, 0.75, 0.64]
-              : [HALF + 0.08 + arrowLen(f2) + 0.55, 1.3, 0]
+            opposite ? [-HALF - 0.08 - arrowLen(f2) - 0.55, 0.75, 0.64] : [HALF + 0.08 + arrowLen(f2) + 0.55, 1.3, 0]
           }
           value={`= ${f2} N`}
         />
       )}
       {pushing && fRes !== 0 && (
         <Concept id="fres">
-          <Arrow3D from={[0, 2.3, 0]} dir={Math.sign(fRes)} length={arrowLen(fRes)} thickness={1.5} color={Q.fres.color} />
+          <Arrow3D
+            from={[0, 2.3, 0]}
+            dir={Math.sign(fRes)}
+            length={arrowLen(fRes)}
+            thickness={1.5}
+            color={Q.fres.color}
+          />
         </Concept>
       )}
       <QuantityTag
@@ -285,11 +339,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
         />
       )}
       <QuantityTag q={Q.m} position={[0, HALF * 2 + 0.25, 0]} value={`= ${mass} kg`} />
-      <QuantityTag
-        q={Q.a}
-        position={[0, 3.05, 0]}
-        value={`= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²`}
-      />
+      <QuantityTag q={Q.a} position={[0, 3.05, 0]} value={`= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²`} />
       <QuantityTag
         q={Q.rr}
         position={[-HALF - 0.9, 0.18, opposite ? 0.7 : 1]}

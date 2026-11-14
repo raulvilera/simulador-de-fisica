@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
@@ -19,6 +20,7 @@ const Q_LIST = Object.values(Q);
 const fmt = (v) => String(v).replace(".", ",");
 
 export default function Lesson4Velocity() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [distance, setDistance] = useState(200); // km (ΔS)
   const [time, setTime] = useState(2); // h (Δt)
   const [playing, setPlaying] = useState(false);
@@ -35,6 +37,8 @@ export default function Lesson4Velocity() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.4, 17]} controlsTarget={[6, 1.4, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         {/* a pista (0 → 13) representa o ΔS digitado: as marcas mostram km */}
         <RulerTrack
           length={14}
@@ -43,6 +47,7 @@ export default function Lesson4Velocity() {
           labelOf={(x) => fmtNum((x * distance) / 13, 1)}
         />
         <AnimatedCar
+          objRef={followRef}
           key={resetKey}
           playing={playing}
           resetKey={resetKey}
@@ -71,7 +76,12 @@ export default function Lesson4Velocity() {
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => 13} y={2.3} color={Q.ds.color} />
         </Concept>
-        <QuantityTag q={Q.ds} position={[4, 2.7, 0]} value={`= ${num(distance)} km`} name="deslocamento da viagem inteira" />
+        <QuantityTag
+          q={Q.ds}
+          position={[4, 2.7, 0]}
+          value={`= ${num(distance)} km`}
+          name="deslocamento da viagem inteira"
+        />
         <QuantityTag q={Q.dt} position={[9.5, 2.7, 0]} value={`= ${fmt(time)} h`} name="do início ao fim da viagem" />
         <QuantityTag q={Q.vm} position={[6.5, 3.6, 0]} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
       </SceneShell>
@@ -80,7 +90,15 @@ export default function Lesson4Velocity() {
         <p className="panel__eyebrow">Aula 4 · Velocidade</p>
         <h1>Velocidade média x instantânea</h1>
         <div className="controls">
-          <Slider label="Deslocamento (ΔS)" value={distance} onChange={setDistance} min={20} max={400} step={10} unit=" km" />
+          <Slider
+            label="Deslocamento (ΔS)"
+            value={distance}
+            onChange={setDistance}
+            min={20}
+            max={400}
+            step={10}
+            unit=" km"
+          />
           <Slider label="Tempo (Δt)" value={time} onChange={setTime} min={1} max={8} step={0.5} unit=" h" />
           <div className="btnRow">
             <button className="btn btn--primary" onClick={() => setPlaying(true)}>
@@ -119,13 +137,36 @@ export default function Lesson4Velocity() {
             </>
           }
           terms={[
-            { symbol: "v", name: "velocidade média: quanto a posição muda, em média, por unidade de tempo", unit: "km/h ou m/s", color: Q.vm.color },
+            {
+              symbol: "v",
+              name: "velocidade média: quanto a posição muda, em média, por unidade de tempo",
+              unit: "km/h ou m/s",
+              color: Q.vm.color,
+            },
             { symbol: "ΔS", name: "deslocamento: variação da posição na viagem", unit: "km ou m", color: Q.ds.color },
             { symbol: "Δt", name: "intervalo de tempo: quanto durou a viagem", unit: "h ou s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "ds", symbol: "ΔS", unit: "km", value: distance, onChange: setDistance, min: 0.001, max: 1e12, color: Q.ds.color },
-            { key: "dt", symbol: "Δt", unit: "h", value: time, onChange: setTime, min: 0.0001, max: 1e12, color: Q.dt.color },
+            {
+              key: "ds",
+              symbol: "ΔS",
+              unit: "km",
+              value: distance,
+              onChange: setDistance,
+              min: 0.001,
+              max: 1e12,
+              color: Q.ds.color,
+            },
+            {
+              key: "dt",
+              symbol: "Δt",
+              unit: "h",
+              value: time,
+              onChange: setTime,
+              min: 0.0001,
+              max: 1e12,
+              color: Q.dt.color,
+            },
           ]}
           steps={
             <>
@@ -137,8 +178,10 @@ export default function Lesson4Velocity() {
             trip.p > 0 ? (
               <>
                 Δt até agora = <b>{num(dtNow)} h</b> · ΔS até agora = <b>{num(dsNow, 1)} km</b>
-                <br />v média até agora = {num(dsNow, 1)} ÷ {nump(dtNow)} = <b>{num(dtNow > 0 ? dsNow / dtNow : 0, 1)} km/h</b>
-                <br />velocímetro (instantânea): <b>{num(instSpeed, 1)} km/h</b>
+                <br />v média até agora = {num(dsNow, 1)} ÷ {nump(dtNow)} ={" "}
+                <b>{num(dtNow > 0 ? dsNow / dtNow : 0, 1)} km/h</b>
+                <br />
+                velocímetro (instantânea): <b>{num(instSpeed, 1)} km/h</b>
               </>
             ) : (
               <>Aperte ▶ Simular viagem: Δt, ΔS e as velocidades mudam enquanto o carro anda.</>
@@ -152,9 +195,8 @@ export default function Lesson4Velocity() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          A velocidade média (v = ΔS/Δt) descreve a viagem inteira. Já o velocímetro mostra a
-          velocidade instantânea, que varia a cada momento — repare que ela oscila durante a
-          simulação, mesmo com a mesma velocidade média.
+          A velocidade média (v = ΔS/Δt) descreve a viagem inteira. Já o velocímetro mostra a velocidade instantânea,
+          que varia a cada momento — repare que ela oscila durante a simulação, mesmo com a mesma velocidade média.
         </p>
       </div>
     </div>
@@ -166,7 +208,7 @@ export default function Lesson4Velocity() {
 // exatamente v: x(p) = 13·(p + A·sen(2πnp)/(2πn)).
 const A = 0.3;
 const N = 3;
-function AnimatedCar({ playing, resetKey, durationSeconds, vm, onSpeedUpdate, carX, children }) {
+function AnimatedCar({ objRef, playing, resetKey, durationSeconds, vm, onSpeedUpdate, carX, children }) {
   const ref = useRef();
   const t = useRef(0);
   const sent = useRef(false);
@@ -186,7 +228,14 @@ function AnimatedCar({ playing, resetKey, durationSeconds, vm, onSpeedUpdate, ca
   });
 
   return (
-    <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
+    <group
+      key={resetKey}
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[0, 0.3, 0]}
+    >
       <Vehicle color="#3b82f6" />
       {children}
     </group>

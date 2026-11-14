@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout, Slider } from "../components/ui.jsx";
@@ -21,6 +22,7 @@ const c = (v, n = 1) => v.toFixed(n).replace(".", ",");
 const SCENE_LENGTH = 8;
 
 export default function Lesson9LabAcceleration() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [running, setRunning] = useState(false);
   const [boost, setBoost] = useState(1); // 1 = impulso fraco, 2 = impulso forte
   const [resetKey, setResetKey] = useState(0);
@@ -50,8 +52,11 @@ export default function Lesson9LabAcceleration() {
   return (
     <div className="lesson__canvas">
       <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.8, 0.8, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         <RulerTrack length={SCENE_LENGTH} start={0} />
         <FrictionCart
+          objRef={followRef}
           running={running}
           boost={boost}
           speed={boost === 2 ? v2c : v1c}
@@ -59,8 +64,16 @@ export default function Lesson9LabAcceleration() {
           resetKey={resetKey}
           onFinish={onFinish}
         />
-        <QuantityTag q={Q.v1} position={[1.6, 1.7, 0]} value={v1 != null ? `= ${c(v1)} cm/s` : "= ? (faça a medição 1)"} />
-        <QuantityTag q={Q.v2} position={[6.4, 1.7, 0]} value={v2 != null ? `= ${c(v2)} cm/s` : "= ? (faça a medição 2)"} />
+        <QuantityTag
+          q={Q.v1}
+          position={[1.6, 1.7, 0]}
+          value={v1 != null ? `= ${c(v1)} cm/s` : "= ? (faça a medição 1)"}
+        />
+        <QuantityTag
+          q={Q.v2}
+          position={[6.4, 1.7, 0]}
+          value={v2 != null ? `= ${c(v2)} cm/s` : "= ? (faça a medição 2)"}
+        />
         <QuantityTag q={Q.dt} position={[4, 1.7, 0]} value={`= ${c(dt)} s`} />
         {deltaV != null && (
           <>
@@ -114,16 +127,48 @@ export default function Lesson9LabAcceleration() {
             </>
           }
           terms={[
-            { symbol: "a", name: "aceleração: quanto a velocidade muda a cada segundo", unit: "cm/s²", color: Q.a.color },
+            {
+              symbol: "a",
+              name: "aceleração: quanto a velocidade muda a cada segundo",
+              unit: "cm/s²",
+              color: Q.a.color,
+            },
             { symbol: "ΔV", name: "variação da velocidade = V2 − V1", unit: "cm/s", color: Q.dv.color },
             { symbol: "V1", name: "velocidade na medição 1 (impulso fraco)", unit: "cm/s", color: Q.v1.color },
             { symbol: "V2", name: "velocidade na medição 2 (impulso forte)", unit: "cm/s", color: Q.v2.color },
             { symbol: "Δt", name: "tempo entre as duas medições", unit: "s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "v1", symbol: "V1", unit: "cm/s", value: v1c, onChange: setV1c, min: -1e12, max: 1e12, color: Q.v1.color },
-            { key: "v2", symbol: "V2", unit: "cm/s", value: v2c, onChange: setV2c, min: -1e12, max: 1e12, color: Q.v2.color },
-            { key: "dt", symbol: "Δt", unit: "s", value: dt, onChange: setDt, min: 0.0001, max: 1e12, color: Q.dt.color },
+            {
+              key: "v1",
+              symbol: "V1",
+              unit: "cm/s",
+              value: v1c,
+              onChange: setV1c,
+              min: -1e12,
+              max: 1e12,
+              color: Q.v1.color,
+            },
+            {
+              key: "v2",
+              symbol: "V2",
+              unit: "cm/s",
+              value: v2c,
+              onChange: setV2c,
+              min: -1e12,
+              max: 1e12,
+              color: Q.v2.color,
+            },
+            {
+              key: "dt",
+              symbol: "Δt",
+              unit: "s",
+              value: dt,
+              onChange: setDt,
+              min: 0.0001,
+              max: 1e12,
+              color: Q.dt.color,
+            },
           ]}
           steps={
             <>
@@ -135,11 +180,13 @@ export default function Lesson9LabAcceleration() {
             run && (running || deltaV == null) ? (
               <>
                 Medição {run.boost}: t = <b>{num(run.t)} s</b> · distância = <b>{num(run.d, 1)} cm</b>
-                <br />V{run.boost} = {num(run.d, 1)} ÷ {nump(run.t)} = <b>{num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s</b>
+                <br />V{run.boost} = {num(run.d, 1)} ÷ {nump(run.t)} ={" "}
+                <b>{num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s</b>
               </>
             ) : deltaV != null ? (
               <>
-                ΔV = {num(v2c)} − {nump(v1c)} = <b>{num(deltaV)} cm/s</b> em Δt = {num(dt)} s → a = <b>{num(accel)} cm/s²</b>
+                ΔV = {num(v2c)} − {nump(v1c)} = <b>{num(deltaV)} cm/s</b> em Δt = {num(dt)} s → a ={" "}
+                <b>{num(accel)} cm/s²</b>
               </>
             ) : (
               <>Faça as medições: o tempo e a distância de cada uma aparecem aqui enquanto o carrinho anda.</>
@@ -155,9 +202,9 @@ export default function Lesson9LabAcceleration() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 10 }}>
-          Faça a medição 1 (impulso fraco) e a medição 2 (impulso forte); a cena calcula a variação
-          de velocidade (ΔV) e, dividindo pelo intervalo de tempo entre as medições, obtém a
-          aceleração média — mesmo princípio de a = ΔV/Δt usado em toda a aula.
+          Faça a medição 1 (impulso fraco) e a medição 2 (impulso forte); a cena calcula a variação de velocidade (ΔV)
+          e, dividindo pelo intervalo de tempo entre as medições, obtém a aceleração média — mesmo princípio de a =
+          ΔV/Δt usado em toda a aula.
         </p>
       </div>
     </div>
@@ -167,7 +214,7 @@ export default function Lesson9LabAcceleration() {
 // 8 unidades de pista = 24 cm. O carrinho anda com a velocidade `speed` (cm/s)
 // digitada; negativa = de trás para a frente. Percursos muito longos/curtos
 // são acelerados/desacelerados na tela, sem mudar o valor medido.
-function FrictionCart({ running, boost, speed, resetKey, onFinish, onTick }) {
+function FrictionCart({ objRef, running, boost, speed, resetKey, onFinish, onTick }) {
   const ref = useRef();
   const t = useRef(0);
   const T = Math.abs(speed) > 1e-9 ? 24 / Math.abs(speed) : 0; // tempo real (s)
@@ -196,7 +243,15 @@ function FrictionCart({ running, boost, speed, resetKey, onFinish, onTick }) {
   });
 
   return (
-    <group key={resetKey + "-" + boost} ref={ref} position={[startX, 0.25, 0]} scale={0.7}>
+    <group
+      key={resetKey + "-" + boost}
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[startX, 0.25, 0]}
+      scale={0.7}
+    >
       <Vehicle color={boost === 2 ? "#ef4444" : "#3b82f6"} rotationY={speed < 0 ? Math.PI : 0} />
     </group>
   );

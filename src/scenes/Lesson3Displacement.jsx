@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
@@ -29,7 +30,7 @@ const fmt = (v) => v.toFixed(1).replace(".", ",").replace(/^-/, "−");
 const fmtp = (v) => (v < 0 ? `(${fmt(v)})` : fmt(v)); // operando de conta
 
 // `PATH` aqui está em unidades da cena; `fromScene`/`k` convertem para metros.
-function Walker({ path: PATH, fromScene, k, playing, sim, onUpdate, children }) {
+function Walker({ objRef, path: PATH, fromScene, k, playing, sim, onUpdate, children }) {
   const ref = useRef();
   const turnRef = useRef();
   const legIndex = useRef(0);
@@ -79,7 +80,13 @@ function Walker({ path: PATH, fromScene, k, playing, sim, onUpdate, children }) 
   });
 
   return (
-    <group ref={ref} position={[PATH[0], 0.3, 0]}>
+    <group
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[PATH[0], 0.3, 0]}
+    >
       <group ref={turnRef}>
         <Vehicle color="#8b5cf6" />
       </group>
@@ -92,6 +99,7 @@ function Walker({ path: PATH, fromScene, k, playing, sim, onUpdate, children }) 
 const startOf = (p) => ({ position: p[0], distance: 0, displacement: 0, leg: 0, finished: false });
 
 export default function Lesson3Displacement() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [playing, setPlaying] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [PATH, setPath] = useState(EXAMPLE);
@@ -133,9 +141,20 @@ export default function Lesson3Displacement() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.6, 18]} controlsTarget={[5.8, 1.4, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         <RulerTrack length={TRACK} start={0} step={fit.stepScene} highlight={SP} labelOf={fit.label} />
 
-        <Walker key={resetKey} path={SP} fromScene={fit.fromScene} k={fit.k} playing={playing} sim={sim} onUpdate={setStats}>
+        <Walker
+          objRef={followRef}
+          key={resetKey}
+          path={SP}
+          fromScene={fit.fromScene}
+          k={fit.k}
+          playing={playing}
+          sim={sim}
+          onUpdate={setStats}
+        >
           {vis.isVisible("s") && (
             <QuantityTag
               position={[0, 1.35, 0]}
@@ -293,7 +312,8 @@ export default function Lesson3Displacement() {
             moved ? (
               <>
                 posição agora: S = <b>{num(stats.position, 1)} m</b>
-                <br />ΔS até agora = {num(stats.position, 1)} − {nump(PATH[0])} = <b>{num(stats.displacement, 1)} m</b>
+                <br />
+                ΔS até agora = {num(stats.position, 1)} − {nump(PATH[0])} = <b>{num(stats.displacement, 1)} m</b>
               </>
             ) : (
               <>Aperte ▶ Ir: a posição e o deslocamento mudam enquanto o carro anda.</>
@@ -352,7 +372,8 @@ export default function Lesson3Displacement() {
             moved ? (
               <>
                 {stats.leg === 0 ? "trecho 1 (indo para C)" : finished ? "chegou em B" : "trecho 2 (voltando para B)"}
-                <br />d até agora = {num(leg1, 1)}{leg2 > 0 ? <> + {num(leg2, 1)}</> : null} = <b>{num(stats.distance, 1)} m</b> · ΔS ={" "}
+                <br />d até agora = {num(leg1, 1)}
+                {leg2 > 0 ? <> + {num(leg2, 1)}</> : null} = <b>{num(stats.distance, 1)} m</b> · ΔS ={" "}
                 <b>{num(stats.displacement, 1)} m</b>
               </>
             ) : (
