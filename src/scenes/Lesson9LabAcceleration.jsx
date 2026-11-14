@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -39,6 +40,16 @@ export default function Lesson9LabAcceleration() {
   const v2 = readings[1]?.v ?? null;
   const deltaV = v1 != null && v2 != null ? v2 - v1 : null;
   const accel = deltaV != null ? deltaV / dt : null;
+
+  // calculadora: recebe as medições da cena, mas aceita valores digitados
+  const [v1c, setV1c] = useState(8);
+  const [v2c, setV2c] = useState(14);
+  useEffect(() => {
+    if (v1 != null) setV1c(Math.round(v1 * 10) / 10);
+  }, [v1]);
+  useEffect(() => {
+    if (v2 != null) setV2c(Math.round(v2 * 10) / 10);
+  }, [v2]);
 
   return (
     <div className="lesson__canvas">
@@ -97,6 +108,39 @@ export default function Lesson9LabAcceleration() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Aceleração média"
+          formula={
+            <>
+              <Term q={Q.a} /> = <Term q={Q.dv} /> ÷ <Term q={Q.dt} /> = (V2 − V1) ÷ Δt
+            </>
+          }
+          terms={[
+            { symbol: "a", name: "aceleração: quanto a velocidade muda a cada segundo", unit: "cm/s²", color: Q.a.color },
+            { symbol: "ΔV", name: "variação da velocidade = V2 − V1", unit: "cm/s", color: Q.dv.color },
+            { symbol: "V1", name: "velocidade na medição 1 (impulso fraco)", unit: "cm/s", color: Q.v1.color },
+            { symbol: "V2", name: "velocidade na medição 2 (impulso forte)", unit: "cm/s", color: Q.v2.color },
+            { symbol: "Δt", name: "tempo entre as duas medições", unit: "s", color: Q.dt.color },
+          ]}
+          inputs={[
+            { key: "v1", symbol: "V1", unit: "cm/s", value: v1c, onChange: setV1c, min: -100000, max: 100000, color: Q.v1.color },
+            { key: "v2", symbol: "V2", unit: "cm/s", value: v2c, onChange: setV2c, min: -100000, max: 100000, color: Q.v2.color },
+            { key: "dt", symbol: "Δt", unit: "s", value: dt, onChange: setDt, min: 0.01, max: 100000, color: Q.dt.color },
+          ]}
+          steps={
+            <>
+              ΔV = {num(v2c)} − {num(v1c)} = {num(v2c - v1c)} cm/s
+              <br />a = {num(v2c - v1c)} ÷ {num(dt)} = <b>{num((v2c - v1c) / dt)} cm/s²</b>
+            </>
+          }
+          note="V1 e V2 são preenchidos pelas medições da cena; você também pode digitar os valores medidos em sala."
+          onReset={() => {
+            setV1c(v1 != null ? Math.round(v1 * 10) / 10 : 8);
+            setV2c(v2 != null ? Math.round(v2 * 10) / 10 : 14);
+            setDt(3);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 10 }}>
           Faça a medição 1 (impulso fraco) e a medição 2 (impulso forte); a cena calcula a variação

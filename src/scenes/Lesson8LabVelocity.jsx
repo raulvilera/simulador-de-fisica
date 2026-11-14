@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -38,6 +39,14 @@ export default function Lesson8LabVelocity() {
         : [...prev, { ds: TRACK_LENGTH_CM, dt: time, v: TRACK_LENGTH_CM / time }]
     );
   };
+
+  // calculadora: começa com a pista de 24 cm; Δt recebe cada nova medição
+  const [dsCalc, setDsCalc] = useState(TRACK_LENGTH_CM);
+  const [dtCalc, setDtCalc] = useState(3);
+  const lastDt = trials.length ? trials[trials.length - 1].dt : null;
+  useEffect(() => {
+    if (lastDt != null) setDtCalc(Math.round(lastDt * 100) / 100);
+  }, [lastDt]);
 
   const avgV =
     trials.length > 0 ? trials.reduce((a, t) => a + t.v, 0) / trials.length : 0;
@@ -118,6 +127,34 @@ export default function Lesson8LabVelocity() {
             </tbody>
           </table>
         </div>
+        <FormulaCard
+          title="Velocidade"
+          formula={
+            <>
+              <Term q={Q.v}>V</Term> = <Term q={Q.ds} /> ÷ <Term q={Q.dt} />
+            </>
+          }
+          terms={[
+            { symbol: "V", name: "velocidade média do carrinho", unit: "cm/s", color: Q.v.color },
+            { symbol: "ΔS", name: "deslocamento: comprimento percorrido na pista", unit: "cm", color: Q.ds.color },
+            { symbol: "Δt", name: "intervalo de tempo medido no cronômetro", unit: "s", color: Q.dt.color },
+          ]}
+          inputs={[
+            { key: "ds", symbol: "ΔS", unit: "cm", value: dsCalc, onChange: setDsCalc, min: 0, max: 100000, color: Q.ds.color },
+            { key: "dt", symbol: "Δt", unit: "s", value: dtCalc, onChange: setDtCalc, min: 0.01, max: 100000, color: Q.dt.color },
+          ]}
+          steps={
+            <>
+              V = {num(dsCalc)} ÷ {num(dtCalc)} = <b>{num(dsCalc / dtCalc)} cm/s</b>
+            </>
+          }
+          note="Δt é preenchido com o tempo de cada nova medição; você também pode digitar os valores medidos em sala."
+          onReset={() => {
+            setDsCalc(TRACK_LENGTH_CM);
+            setDtCalc(lastDt != null ? Math.round(lastDt * 100) / 100 : 3);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 10 }}>
           Repita a medição até 5 vezes (cada tentativa tem uma leve variação, como no experimento

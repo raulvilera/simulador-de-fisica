@@ -3,7 +3,8 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -25,6 +26,8 @@ export default function Lesson6NewtonForces() {
   const [playing, setPlaying] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
+  const [dv, setDv] = useState(20); // a = ΔV/Δt (exemplo: 0 → 20 m/s em 4 s)
+  const [dtA, setDtA] = useState(4);
   const fRes = opposite ? f1 - f2 : f1 + f2;
   const accel = mass > 0 ? fRes / mass : 0;
 
@@ -66,6 +69,63 @@ export default function Lesson6NewtonForces() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="2ª Lei de Newton"
+          formula={
+            <>
+              <Term q={Q.fres} /> = <Term q={Q.m} /> · <Term q={Q.a} />
+              <span style={{ fontSize: "0.85em", opacity: 0.8 }}> → a = FRes ÷ m</span>
+            </>
+          }
+          terms={[
+            { symbol: "FRes", name: "força resultante: soma das forças (sentidos opostos se subtraem)", unit: "N", color: Q.fres.color },
+            { symbol: "m", name: "massa: quantidade de matéria do corpo (inércia)", unit: "kg", color: Q.m.color },
+            { symbol: "a", name: "aceleração: quanto a velocidade muda a cada segundo", unit: "m/s²", color: Q.a.color },
+            { symbol: "F1, F2", name: "forças aplicadas pelas pessoas", unit: "N", color: Q.f1.color },
+          ]}
+          inputs={[
+            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.1, max: 100000, color: Q.m.color },
+            { key: "f1", symbol: "F1", unit: "N", value: f1, onChange: setF1, min: 0, max: 100000, color: Q.f1.color },
+            { key: "f2", symbol: "F2", unit: "N", value: f2, onChange: setF2, min: 0, max: 100000, color: Q.f2.color },
+          ]}
+          steps={
+            <>
+              FRes = {num(f1)} {opposite ? "−" : "+"} {num(f2)} = <b>{num(fRes)} N</b>
+              <br />a = {num(fRes)} ÷ {num(mass)} = <b>{num(accel)} m/s²</b>
+            </>
+          }
+          note="Use a caixa “Forças em sentidos opostos” acima para subtrair F2."
+          onReset={() => {
+            setMass(40);
+            setF1(15);
+            setF2(25);
+            setOpposite(false);
+          }}
+        />
+
+        <FormulaCard
+          title="Aceleração"
+          formula={<>a = ΔV ÷ Δt</>}
+          terms={[
+            { symbol: "a", name: "aceleração média", unit: "m/s²", color: Q.a.color },
+            { symbol: "ΔV", name: "variação da velocidade = V final − V inicial", unit: "m/s", color: "#38bdf8" },
+            { symbol: "Δt", name: "intervalo de tempo da mudança", unit: "s", color: "#a78bfa" },
+          ]}
+          inputs={[
+            { key: "dv", symbol: "ΔV", unit: "m/s", value: dv, onChange: setDv, min: -100000, max: 100000, color: "#38bdf8" },
+            { key: "dt", symbol: "Δt", unit: "s", value: dtA, onChange: setDtA, min: 0.01, max: 100000, color: "#a78bfa" },
+          ]}
+          steps={
+            <>
+              a = {num(dv)} ÷ {num(dtA)} = <b>{num(dv / dtA)} m/s²</b>
+            </>
+          }
+          onReset={() => {
+            setDv(20);
+            setDtA(4);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           2ª Lei de Newton: F<sub>Res</sub> = m·a. Quando as forças têm sentidos opostos, a
@@ -85,7 +145,7 @@ const HALF = 0.55;
 const START_X = -2.6;
 const LIMIT = 7; // meia largura do caixote
 const SCALE = 1 / 25; // comprimento da seta: 1 unidade a cada 25 N
-const arrowLen = (f) => Math.max(Math.abs(f) * SCALE, 0.45);
+const arrowLen = (f) => Math.min(Math.max(Math.abs(f) * SCALE, 0.45), 5);
 
 function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
   const ref = useRef();

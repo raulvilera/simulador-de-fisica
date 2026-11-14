@@ -5,6 +5,7 @@ import SceneShell from "./SceneShell.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
 import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 import { Readout } from "../components/ui.jsx";
 
 const TOWER_HEIGHT = 9;
@@ -130,6 +131,8 @@ export default function Lesson1History() {
   const [aristotleMode, setAristotleMode] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [landTime, setLandTime] = useState(null);
+  const [hC, setHC] = useState(TOWER_HEIGHT); // calculadora de queda livre
+  const [gC, setGC] = useState(G);
 
   const drop = () => {
     setLandTime(null);
@@ -210,6 +213,31 @@ export default function Lesson1History() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Queda livre (sem resistência do ar)"
+          formula={<>t = √(2 · h ÷ g)</>}
+          terms={[
+            { symbol: "t", name: "tempo de queda: não depende da massa", unit: "s", color: Q.t.color },
+            { symbol: "h", name: "altura de onde o corpo é solto", unit: "m", color: Q.h.color },
+            { symbol: "g", name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)", unit: "m/s²", color: Q.g.color },
+          ]}
+          inputs={[
+            { key: "h", symbol: "h", unit: "m", value: hC, onChange: setHC, min: 0, max: 100000, color: Q.h.color },
+            { key: "g", symbol: "g", unit: "m/s²", value: gC, onChange: setGC, min: 0.01, max: 1000, color: Q.g.color },
+          ]}
+          steps={
+            <>
+              t = √(2 × {num(hC)} ÷ {num(gC)}) = <b>{num(Math.sqrt((2 * hC) / gC))} s</b>
+              <br />o mesmo tempo para a esfera pesada e para a leve
+            </>
+          }
+          note="A torre da cena tem 9 m. Experimente g = 1,6 (Lua): a queda fica mais lenta, mas pena e martelo continuam chegando juntos."
+          onReset={() => {
+            setHC(TOWER_HEIGHT);
+            setGC(G);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Desative a "visão aristotélica" para reproduzir o experimento real: desprezando a

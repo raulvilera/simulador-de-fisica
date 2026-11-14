@@ -1,0 +1,140 @@
+.fcard {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 14px;
+}
+
+.fcard__formula {
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-size: 1.3rem;
+  text-align: center;
+  padding: 8px 6px;
+  margin: 6px 0 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(139, 92, 246, 0.18));
+  color: #e0f2fe;
+}
+
+.fcard__sub {
+  margin: 10px 0 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7dd3fc;
+}
+
+.fcard__terms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.fcard__terms li {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  color: #d4d8ea;
+}
+
+.fcard__terms b {
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-size: 0.98rem;
+  text-align: right;
+}
+
+.fcard__terms em {
+  color: #8891b5;
+  font-style: normal;
+}
+
+.fcard__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fcard__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fcard__fieldLabel {
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.fcard__inputWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 7, 13, 0.6);
+  overflow: hidden;
+}
+
+.fcard__inputWrap:focus-within {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.25);
+}
+
+.fcard__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #f1f3fb;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  padding: 8px 8px;
+  outline: none;
+}
+
+.fcard__unit {
+  flex: 0 0 auto;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  color: #8891b5;
+}
+
+.fcard__steps {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: #ecfdf5;
+}
+
+.fcard__steps b {
+  color: #4ade80;
+}
+
+.fcard__note {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  color: #8891b5;
+}
+
+.fcard__reset {
+  margin-top: 10px;
+  width: 100%;
+}
+
+@media (max-width: 820px) and (orientation: portrait) {
+  .fcard__input {
+    font-size: 16px; /* evita o zoom automático do iPhone ao tocar no campo */
+    padding: 10px 8px;
+  }
+}

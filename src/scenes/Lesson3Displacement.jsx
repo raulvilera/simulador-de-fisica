@@ -4,10 +4,13 @@ import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 import { QuantityTag, Pin, SpanArrow, QuantityToggles, Term, useQuantityVisibility } from "./quantities.jsx";
 
-// Replica o exemplo do material: A (0 m) -> C (10 m) -> volta e para em B (6 m).
-const PATH = [0, 10, 6];
+// Exemplo do material: A (0 m) -> C (10 m) -> volta e para em B (6 m).
+// Os três pontos podem ser digitados no painel (0 a 14 m).
+const EXAMPLE = [0, 10, 6];
+const TRACK = 14;
 const SPEED = 2.5; // m/s
 
 // Grandezas mostradas na cena. A mesma cor aparece na etiqueta, na seta e na
@@ -22,7 +25,7 @@ const Q_LIST = Object.values(Q);
 
 const fmt = (v) => v.toFixed(1).replace(".", ",");
 
-function Walker({ playing, sim, onUpdate, children }) {
+function Walker({ path: PATH, playing, sim, onUpdate, children }) {
   const ref = useRef();
   const turnRef = useRef();
   const legIndex = useRef(0);
@@ -33,7 +36,7 @@ function Walker({ playing, sim, onUpdate, children }) {
   useFrame((_, delta) => {
     if (!playing || legIndex.current >= PATH.length - 1) return;
     const target = PATH[legIndex.current + 1];
-    const dir = target > pos.current ? 1 : -1;
+    const dir = target >= pos.current ? 1 : -1;
 
     // Antes de voltar, o carro faz a meia-volta: ele sempre anda de frente.
     const heading = dir > 0 ? 0 : Math.PI;
@@ -82,26 +85,36 @@ function Walker({ playing, sim, onUpdate, children }) {
   );
 }
 
-const START = { position: PATH[0], distance: 0, displacement: 0, leg: 0, finished: false };
+const startOf = (p) => ({ position: p[0], distance: 0, displacement: 0, leg: 0, finished: false });
 
 export default function Lesson3Displacement() {
   const [playing, setPlaying] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const [stats, setStats] = useState(START);
-  const sim = useRef({ pos: PATH[0], leg: 0 });
+  const [PATH, setPath] = useState(EXAMPLE);
+  const [stats, setStats] = useState(() => startOf(EXAMPLE));
+  const sim = useRef({ pos: EXAMPLE[0], leg: 0 });
   const vis = useQuantityVisibility(Q_LIST.map((q) => q.id));
 
-  const reset = () => {
+  const reset = (p = PATH) => {
     setPlaying(false);
-    setStats(START);
-    sim.current = { pos: PATH[0], leg: 0 };
+    setStats(startOf(p));
+    sim.current = { pos: p[0], leg: 0 };
     setResetKey((k) => k + 1);
   };
+  // mudar um ponto do trajeto recomeça a animação com os novos valores
+  const setPoint = (i, v) => {
+    const p = PATH.slice();
+    p[i] = v;
+    setPath(p);
+    reset(p);
+  };
+  const leg1Len = Math.abs(PATH[1] - PATH[0]);
+  const leg2Len = Math.abs(PATH[2] - PATH[1]);
 
   const finished = stats.finished;
   const moved = stats.distance > 0.05;
-  const leg1 = Math.min(stats.distance, PATH[1] - PATH[0]);
-  const leg2 = Math.max(0, stats.distance - (PATH[1] - PATH[0]));
+  const leg1 = Math.min(stats.distance, leg1Len);
+  const leg2 = Math.max(0, stats.distance - leg1Len);
   const sLabel = finished ? (
     <>
       S<sub>f</sub>
@@ -114,9 +127,9 @@ export default function Lesson3Displacement() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.6, 18]} controlsTarget={[5.8, 1.4, 0]}>
-        <RulerTrack length={14} start={0} highlight={PATH} />
+        <RulerTrack length={TRACK} start={0} highlight={PATH} />
 
-        <Walker key={resetKey} playing={playing} sim={sim} onUpdate={setStats}>
+        <Walker key={resetKey} path={PATH} playing={playing} sim={sim} onUpdate={setStats}>
           {vis.isVisible("s") && (
             <QuantityTag
               position={[0, 1.35, 0]}
@@ -200,11 +213,11 @@ export default function Lesson3Displacement() {
         <div className="controls">
           <div className="btnRow">
             <button className="btn btn--primary" onClick={() => setPlaying(true)}>
-              ▶ Ir de A (0m) → C (10m) → B (6m)
+              ▶ Ir de A ({num(PATH[0])} m) → C ({num(PATH[1])} m) → B ({num(PATH[2])} m)
             </button>
           </div>
           <div className="btnRow">
-            <button className="btn btn--ghost" onClick={reset}>
+            <button className="btn btn--ghost" onClick={() => reset()}>
               ↺ Reiniciar
             </button>
           </div>
@@ -217,26 +230,130 @@ export default function Lesson3Displacement() {
           />
         </div>
 
-        <div className="panel__section">
-          <h3>Equação</h3>
-          <span className="formula">
-            <Term q={Q.ds} vis={vis} /> ={" "}
-            <Term q={Q.s} vis={vis}>
-              S<sub>f</sub>
-            </Term>{" "}
-            − <Term q={Q.s0} vis={vis} />
-          </span>
-          <span className="formula">
-            <Term q={Q.d} vis={vis} /> = soma de todos os trechos
-          </span>
-        </div>
+        <FormulaCard
+          title="Deslocamento"
+          formula={
+            <>
+              <Term q={Q.ds} /> ={" "}
+              <Term q={Q.s}>
+                S<sub>f</sub>
+              </Term>{" "}
+              − <Term q={Q.s0} />
+            </>
+          }
+          terms={[
+            {
+              symbol: "ΔS",
+              name: "deslocamento: variação da posição (só importam o início e o fim)",
+              unit: "m",
+              color: Q.ds.color,
+            },
+            { symbol: "Sf", name: "posição final: onde o corpo termina", unit: "m", color: Q.s.color },
+            {
+              symbol: "S₀",
+              name: "posição inicial: onde o corpo começa (em relação à origem)",
+              unit: "m",
+              color: Q.s0.color,
+            },
+          ]}
+          inputs={[
+            {
+              key: "s0",
+              symbol: "S₀ (ponto A)",
+              unit: "m",
+              value: PATH[0],
+              onChange: (v) => setPoint(0, v),
+              min: 0,
+              max: TRACK,
+              color: Q.s0.color,
+            },
+            {
+              key: "sf",
+              symbol: "Sf (ponto B)",
+              unit: "m",
+              value: PATH[2],
+              onChange: (v) => setPoint(2, v),
+              min: 0,
+              max: TRACK,
+              color: Q.s.color,
+            },
+          ]}
+          steps={
+            <>
+              ΔS = {num(PATH[2])} − {num(PATH[0])} = <b>{num(PATH[2] - PATH[0])} m</b>
+            </>
+          }
+          onReset={() => {
+            setPath(EXAMPLE);
+            reset(EXAMPLE);
+          }}
+          note="Posições entre 0 e 14 m (o tamanho da pista). A animação usa os valores digitados."
+        />
+
+        <FormulaCard
+          title="Distância percorrida"
+          formula={
+            <>
+              <Term q={Q.d} /> = d<sub>1</sub> + d<sub>2</sub>
+            </>
+          }
+          terms={[
+            { symbol: "d", name: "distância percorrida: soma de todo o caminho feito", unit: "m", color: Q.d.color },
+            { symbol: "d₁", name: "trecho 1: de A até o ponto de retorno C = |C − A|", unit: "m", color: Q.d.color },
+            { symbol: "d₂", name: "trecho 2: de C até B = |B − C|", unit: "m", color: Q.d.color },
+          ]}
+          inputs={[
+            {
+              key: "a",
+              symbol: "A (início)",
+              unit: "m",
+              value: PATH[0],
+              onChange: (v) => setPoint(0, v),
+              min: 0,
+              max: TRACK,
+              color: Q.s0.color,
+            },
+            {
+              key: "c",
+              symbol: "C (retorno)",
+              unit: "m",
+              value: PATH[1],
+              onChange: (v) => setPoint(1, v),
+              min: 0,
+              max: TRACK,
+              color: Q.d.color,
+            },
+            {
+              key: "b",
+              symbol: "B (fim)",
+              unit: "m",
+              value: PATH[2],
+              onChange: (v) => setPoint(2, v),
+              min: 0,
+              max: TRACK,
+              color: Q.s.color,
+            },
+          ]}
+          steps={
+            <>
+              d = |{num(PATH[1])} − {num(PATH[0])}| + |{num(PATH[2])} − {num(PATH[1])}| = {num(leg1Len)} +{" "}
+              {num(leg2Len)} = <b>{num(leg1Len + leg2Len)} m</b>
+              <br />
+              ΔS = <b>{num(PATH[2] - PATH[0])} m</b> {leg1Len + leg2Len !== Math.abs(PATH[2] - PATH[0]) ? "≠" : "="} d
+            </>
+          }
+          onReset={() => {
+            setPath(EXAMPLE);
+            reset(EXAMPLE);
+          }}
+        />
 
         <QuantityToggles items={Q_LIST} vis={vis} />
 
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          ΔS = S<sub>f</sub> − S<sub>0</sub>. Repare que a distância percorrida soma o trajeto todo (10 + 4 = 14 m),
-          enquanto o deslocamento considera só a posição final e a inicial (6 − 0 = 6 m) — exatamente o exemplo do
-          "Pause e responda" da aula.
+          Repare que a distância percorrida soma o trajeto todo (no exemplo, 10 + 4 = 14 m), enquanto o deslocamento
+          considera só a posição final e a inicial (6 − 0 = 6 m) — o exemplo do "Pause e responda" da aula. Troque os
+          valores acima para criar outros problemas.
         </p>
       </div>
     </div>

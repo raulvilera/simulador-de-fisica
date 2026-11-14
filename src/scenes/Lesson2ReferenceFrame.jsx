@@ -3,10 +3,13 @@ import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Pin, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
-const V_JOAO = 3; // m/s (velocidade do carro de João, no referencial do solo)
-const V_OUTRO = 5; // m/s (velocidade do outro carro)
+// Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
+const EX_JOAO = 3;
+const EX_OUTRO = 5;
+const f1 = (v) => (Math.round(v * 100) / 100).toLocaleString("pt-BR");
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -17,7 +20,7 @@ const Q = {
 };
 const Q_LIST = Object.values(Q);
 
-function Road({ playing, frame }) {
+function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
@@ -60,7 +63,7 @@ function Road({ playing, frame }) {
         <QuantityTag
           q={Q.vj}
           position={[0, 2.05, 0]}
-          value={frame === "solo" ? `= ${V_JOAO} m/s` : "= 0 m/s"}
+          value={frame === "solo" ? `= ${f1(V_JOAO)} m/s` : "= 0 m/s"}
           name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
         />
         {frame === "joao" && (
@@ -75,8 +78,8 @@ function Road({ playing, frame }) {
         <QuantityTag
           q={Q.vo}
           position={[0, 2.05, 0]}
-          value={frame === "solo" ? `= ${V_OUTRO} m/s` : `= ${V_OUTRO - V_JOAO} m/s`}
-          name={frame === "solo" ? "em relação à rua" : "vista por João (5 − 3)"}
+          value={frame === "solo" ? `= ${f1(V_OUTRO)} m/s` : `= ${f1(V_OUTRO - V_JOAO)} m/s`}
+          name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
         />
       </group>
       {frame === "solo" && (
@@ -96,13 +99,14 @@ export default function Lesson2ReferenceFrame() {
   const [playing, setPlaying] = useState(false);
   const [frame, setFrame] = useState("solo");
 
-  const relativeSpeed =
-    frame === "solo" ? V_OUTRO : (V_OUTRO - V_JOAO).toFixed(1);
+  const [V_JOAO, setVJ] = useState(EX_JOAO);
+  const [V_OUTRO, setVO] = useState(EX_OUTRO);
+  const relativeSpeed = frame === "solo" ? f1(V_OUTRO) : f1(V_OUTRO - V_JOAO);
 
   return (
     <div className="lesson__canvas">
       <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]}>
-        <Road playing={playing} frame={frame} />
+        <Road playing={playing} frame={frame} vJ={V_JOAO} vO={V_OUTRO} />
       </SceneShell>
 
       <div className="panel">
@@ -133,8 +137,8 @@ export default function Lesson2ReferenceFrame() {
           </div>
           <Readout
             items={[
-              { label: "Velocidade de João (solo)", value: `${V_JOAO} m/s` },
-              { label: "Vel. do outro carro (solo)", value: `${V_OUTRO} m/s` },
+              { label: "Velocidade de João (solo)", value: `${f1(V_JOAO)} m/s` },
+              { label: "Vel. do outro carro (solo)", value: `${f1(V_OUTRO)} m/s` },
               {
                 label: "Vel. do outro carro vista por João",
                 value: `${relativeSpeed} m/s`,
@@ -143,6 +147,40 @@ export default function Lesson2ReferenceFrame() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Velocidade relativa"
+          formula={
+            <>
+              v<sub>rel</sub> = <Term q={Q.vo}>v<sub>outro</sub></Term> − <Term q={Q.vj}>v<sub>João</sub></Term>
+            </>
+          }
+          terms={[
+            { symbol: "vrel", name: "velocidade do outro carro vista por João (referencial no carro de João)", unit: "m/s", color: Q.ref.color },
+            { symbol: "voutro", name: "velocidade do outro carro em relação à rua", unit: "m/s", color: Q.vo.color },
+            { symbol: "vJoão", name: "velocidade de João em relação à rua", unit: "m/s", color: Q.vj.color },
+          ]}
+          inputs={[
+            { key: "vj", symbol: "vJoão", unit: "m/s", value: V_JOAO, onChange: setVJ, min: 0, max: 15, color: Q.vj.color },
+            { key: "vo", symbol: "voutro", unit: "m/s", value: V_OUTRO, onChange: setVO, min: 0, max: 15, color: Q.vo.color },
+          ]}
+          steps={
+            <>
+              v<sub>rel</sub> = {num(V_OUTRO)} − {num(V_JOAO)} = <b>{num(V_OUTRO - V_JOAO)} m/s</b>
+              <br />
+              {V_OUTRO - V_JOAO > 0
+                ? "João vê o outro carro se afastar para frente."
+                : V_OUTRO - V_JOAO < 0
+                  ? "João vê o outro carro ficar para trás."
+                  : "João vê o outro carro parado ao lado dele."}
+            </>
+          }
+          note="Velocidades de 0 a 15 m/s; os carros da cena usam os valores digitados."
+          onReset={() => {
+            setVJ(EX_JOAO);
+            setVO(EX_OUTRO);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Mude o referencial para "Carro do João": repare que o carro dele passa a ficar parado no
