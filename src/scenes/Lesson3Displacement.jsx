@@ -7,7 +7,6 @@ import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 import { fitTrack } from "./scale.js";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 import { QuantityTag, Pin, SpanArrow, QuantityToggles, Term, useQuantityVisibility } from "./quantities.jsx";
 
 // Exemplo do material: A (0 m) -> C (10 m) -> volta e para em B (6 m).
@@ -232,14 +231,6 @@ export default function Lesson3Displacement() {
           </>
         )}
       </SceneShell>
-      <LiveHud
-        phase={!moved ? "parado" : finished ? "chegou em B" : stats.leg === 0 ? "indo para C" : "voltando para B"}
-        items={[
-          { symbol: "S", value: `${num(stats.position, 1)} m`, color: Q.s.color, note: "posição" },
-          { symbol: "ΔS", value: `${num(stats.displacement, 1)} m`, color: Q.ds.color },
-          { symbol: "d", value: `${num(stats.distance, 1)} m`, color: Q.d.color },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 3 · Posição e deslocamento</p>
