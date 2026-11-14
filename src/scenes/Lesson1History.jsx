@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import KeepInView from "./KeepInView.jsx";
+import { useProtected } from "./LabelLayout.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
@@ -71,6 +72,7 @@ function FallingBalls({ objRef, dropping, theory, onLanded, onTick, h, g, live }
   const t = useRef(0);
   const landed = useRef(false);
   const tick = useThrottled(onTick, 90);
+  useProtected(heavyRef, lightRef); // etiquetas não cobrem as esferas
   const M = useMemo(() => model(theory, h, g), [theory, h, g]);
   const k = sceneScale(h);
 

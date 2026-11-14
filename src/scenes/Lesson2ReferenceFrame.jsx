@@ -32,9 +32,9 @@ const CAR_Y = 0.3; // altura do "centro" do carro para a linha de visada
 const sgn = (v) => (v >= 0 ? "+" : "−") + f1(Math.abs(v));
 const Q_LIST = Object.values(Q);
 
-// A pista vai de −30 a +30 m. Quando um carro chega ao fim dela, o movimento
+// Os carros andam até ±20 m do observador. Quando um chega lá, o movimento
 // termina (nada de "teletransporte" de uma ponta à outra).
-const ROAD_END = 28;
+const ROAD_END = 20; // mais curto: a câmera não precisa se afastar tanto e os carros não ficam minúsculos
 
 function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey, clockT = 0, xJ = 0, xO = -4 }) {
   const joaoRef = useRef();
@@ -100,16 +100,8 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
         <QuantityTag
           q={Q.vj}
           position={[0, 2.05, 0]}
-          value={frame === "solo" ? `= ${f1(V_JOAO)} m/s` : "= 0 m/s"}
+          value={frame === "solo" ? `= ${f1(V_JOAO)} m/s · x = ${num(xJ, 1)} m` : "= 0 m/s · x = 0 m"}
           name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
-        />
-        <QuantityTag
-          id="posicoes"
-          position={[0, 2.75, 0]}
-          color={Q.vj.color}
-          symbol="x"
-          value={frame === "solo" ? `= ${num(xJ, 1)} m` : "= 0 m"}
-          name={frame === "solo" ? "posição em relação ao observador" : "João é a origem do próprio referencial"}
         />
         {frame === "joao" && (
           <QuantityTag q={Q.ref} position={[0, 3.45, 0]} value="carro do João" name="o observador viaja com João" />
@@ -123,17 +115,12 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
         <QuantityTag
           q={Q.vo}
           position={[0, 2.05, 0]}
-          value={frame === "solo" ? `= ${f1(V_OUTRO)} m/s` : `= ${f1(V_OUTRO - V_JOAO)} m/s`}
+          value={
+            frame === "solo"
+              ? `= ${f1(V_OUTRO)} m/s · x = ${num(xO, 1)} m`
+              : `= ${f1(V_OUTRO - V_JOAO)} m/s · x = ${num(xO - xJ, 1)} m`
+          }
           name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
-        />
-        {/* posição que muda durante o movimento */}
-        <QuantityTag
-          id="posicoes"
-          position={[0, 2.75, 0]}
-          color={Q.vo.color}
-          symbol="x"
-          value={frame === "solo" ? `= ${num(xO, 1)} m` : `= ${num(xO - xJ, 1)} m`}
-          name={frame === "solo" ? "posição em relação ao observador" : "posição em relação ao João"}
         />
       </group>
       {/* tempo e distância entre os carros, mudando durante o movimento */}
@@ -232,7 +219,7 @@ export default function Lesson2ReferenceFrame() {
   const relativeSpeed = frame === "solo" ? f1(V_OUTRO) : f1(V_OUTRO - V_JOAO);
 
   // posições do instante atual (em relação ao observador, x = 0); param no fim da pista
-  const lim = (v) => Math.max(-28, Math.min(28, v));
+  const lim = (v) => Math.max(-ROAD_END, Math.min(ROAD_END, v));
   const xJnow = lim(V_JOAO * clock.t);
   const xOnow = lim(-4 + V_OUTRO * clock.t);
 

@@ -181,7 +181,7 @@ export function Ball({ position = [0, 1, 0], color = "#f87171", radius = 0.3 }) 
 // `dir` = 1 aponta para +X, `dir` = −1 aponta para −X (o rótulo nunca espelha).
 export function Arrow3D({ from = [0, 0.5, 0], length = 1, color = "#f59e0b", label, dir = 1, thickness = 1 }) {
   return (
-    <group position={from}>
+    <group position={from} userData={{ noProtect: true }}>
       <group rotation={[0, dir < 0 ? Math.PI : 0, 0]}>
         <mesh position={[(length - 0.3) / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
           <cylinderGeometry args={[0.055 * thickness, 0.055 * thickness, Math.max(length - 0.3, 0.01), 16]} />

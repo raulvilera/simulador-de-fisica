@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, PerformanceMonitor, useProgress, useTexture } from "@react-three/drei";
+import LabelLayout from "./LabelLayout.jsx";
 import { SkyDome, PeriodSky, TrackSetting, PisaSetting, YardSetting, LabSetting } from "./settings.jsx";
 
 // Luz HDR do autódromo (céu limpo de dia): serve de iluminação ambiente para
@@ -156,6 +157,8 @@ export default function SceneShell({
           {children}
         </Suspense>
 
+        {/* etiquetas sem sobreposição e sem cobrir os objetos da simulação */}
+        <LabelLayout />
         <OrbitControls
           makeDefault
           target={initialTarget}
