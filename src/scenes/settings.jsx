@@ -98,6 +98,56 @@ export function SkyDome() {
   );
 }
 
+// Céu de Pisa (~1590): desenhado por código — degradê azul e nuvens de verão —
+// para não aparecer nada moderno no horizonte (a foto 360° é de um autódromo).
+export function PeriodSky() {
+  const map = useMemo(() => {
+    const [canvas, ctx] = makeCanvas(2048, 1024);
+    const g = ctx.createLinearGradient(0, 0, 0, 1024);
+    g.addColorStop(0, "#3f78c4");
+    g.addColorStop(0.32, "#6fa0db");
+    g.addColorStop(0.48, "#b9d3ea");
+    g.addColorStop(0.5, "#d8e4ea");
+    g.addColorStop(1, "#c9d6d2");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 2048, 1024);
+    // nuvens: aglomerados de "bolhas" macias, acima do horizonte
+    const rand = lcg(1590);
+    for (let c = 0; c < 26; c++) {
+      const cx = rand() * 2048;
+      const cy = 170 + rand() * 300;
+      const w = 90 + rand() * 220;
+      for (let i = 0; i < 18; i++) {
+        const x = cx + (rand() - 0.5) * w;
+        const y = cy + (rand() - 0.5) * w * 0.18;
+        const rr = 18 + rand() * w * 0.22;
+        for (const ox of [-2048, 0, 2048]) {
+          const gr = ctx.createRadialGradient(x + ox, y, 0, x + ox, y, rr);
+          gr.addColorStop(0, "rgba(255,255,255,0.55)");
+          gr.addColorStop(0.6, "rgba(250,252,255,0.25)");
+          gr.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = gr;
+          ctx.fillRect(x + ox - rr, y - rr, rr * 2, rr * 2);
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    return tex;
+  }, []);
+  const geometry = useMemo(() => {
+    const g = new THREE.SphereGeometry(600, 48, 24);
+    g.scale(1, 1, -1);
+    return g;
+  }, []);
+  return (
+    <mesh geometry={geometry} renderOrder={-10}>
+      <meshBasicMaterial map={map} depthWrite={false} toneMapped={false} fog={false} />
+    </mesh>
+  );
+}
+
 // Árvores (copa + tronco) em duas chamadas de desenho, não importa quantas sejam.
 function Trees({ spots, cypress = false }) {
   const [trunks, crowns] = useMemo(() => {
@@ -328,7 +378,7 @@ function useHouseTexture() {
       for (let col = 0; col < 3; col++) {
         const x = 30 + col * 78;
         const y = 26 + row * 78;
-        ctx.fillStyle = "#3b4a3f"; // venezianas verdes
+        ctx.fillStyle = "#5a3d26"; // postigos de madeira
         ctx.fillRect(x, y, 40, 54);
         ctx.fillStyle = "rgba(20,24,28,0.85)";
         ctx.fillRect(x + 8, y + 4, 24, 46);
@@ -516,6 +566,218 @@ function Baptistery({ marble }) {
   );
 }
 
+// Camposanto Monumentale: o longo claustro de mármore branco ao norte da praça,
+// com arcadas cegas e telhado de chumbo, colado à muralha.
+function Camposanto({ marble }) {
+  const side = useMemo(() => {
+    const t = marble.clone();
+    t.repeat.set(9, 1);
+    t.needsUpdate = true;
+    return t;
+  }, [marble]);
+  return (
+    <group position={[-22, 0, -20.5]}>
+      <mesh position={[0, 1.4, 0]}>
+        <boxGeometry args={[42, 2.8, 8]} />
+        <meshLambertMaterial map={side} />
+      </mesh>
+      <GableRoof length={42.4} width={8.6} rise={0.9} position={[0, 2.8, 0]} />
+      {/* pequena cúpula da capela */}
+      <mesh position={[-8, 3.8, 0]}>
+        <sphereGeometry args={[1.1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshLambertMaterial color="#8d9399" />
+      </mesh>
+    </group>
+  );
+}
+
+// Muralha medieval de tijolo com ameias, torres quadradas e a Porta Santa Maria.
+const WALL_N = { z: -27, x0: -86, x1: 62 };
+const WALL_W = { x: -60, z0: -27, z1: 27 };
+function CityWalls({ brick, brickLong }) {
+  const merlons = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const pts = [];
+    for (let x = WALL_N.x0; x <= WALL_N.x1; x += 1.4) pts.push([x, WALL_N.z, 0]);
+    for (let z = WALL_W.z0; z <= WALL_W.z1; z += 1.4) pts.push([WALL_W.x, z, Math.PI / 2]);
+    const m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 0.55, 0.9), new THREE.MeshLambertMaterial({ map: brick }), pts.length);
+    pts.forEach(([x, z, ry], i) => {
+      dummy.position.set(x, 3.27, z);
+      dummy.rotation.set(0, ry, 0);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    });
+    return m;
+  }, [brick]);
+  const towers = [
+    [-80, WALL_N.z],
+    [-45, WALL_N.z],
+    [-8, WALL_N.z],
+    [30, WALL_N.z],
+    [58, WALL_N.z],
+    [WALL_W.x, -5],
+    [WALL_W.x, 18],
+  ];
+  return (
+    <>
+      <mesh position={[(WALL_N.x0 + WALL_N.x1) / 2, 1.5, WALL_N.z]}>
+        <boxGeometry args={[WALL_N.x1 - WALL_N.x0, 3, 0.9]} />
+        <meshLambertMaterial map={brickLong} />
+      </mesh>
+      <mesh position={[WALL_W.x, 1.5, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[WALL_W.z1 - WALL_W.z0, 3, 0.9]} />
+        <meshLambertMaterial map={brickLong} />
+      </mesh>
+      <primitive object={merlons} />
+      {towers.map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, 2.3, 0]}>
+            <boxGeometry args={[2.4, 4.6, 2.4]} />
+            <meshLambertMaterial map={brick} />
+          </mesh>
+          {[-0.8, 0, 0.8].map((d) =>
+            [
+              [d, 1.05],
+              [d, -1.05],
+              [1.05, d],
+              [-1.05, d],
+            ].map(([mx, mz], k) => (
+              <mesh key={`${d}-${k}`} position={[mx, 4.85, mz]}>
+                <boxGeometry args={[0.5, 0.5, 0.5]} />
+                <meshLambertMaterial map={brick} />
+              </mesh>
+            )),
+          )}
+        </group>
+      ))}
+      {/* Porta Santa Maria: torre-portão com arco, na muralha oeste */}
+      <group position={[WALL_W.x, 0, 8]}>
+        <mesh position={[0, 3, 0]}>
+          <boxGeometry args={[3.2, 6, 4]} />
+          <meshLambertMaterial map={brick} />
+        </mesh>
+        <mesh position={[1.62, 1.3, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[2, 2.6]} />
+          <meshBasicMaterial color="#2a2018" />
+        </mesh>
+        <mesh position={[0, 6.4, 0]} rotation={[0, Math.PI / 4, 0]}>
+          <coneGeometry args={[2.7, 1.4, 4]} />
+          <meshLambertMaterial color="#9c4a2c" />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+// Pessoas do fim do século XVI (escala da torre: 1 unidade ≈ 6 m, então uma
+// pessoa tem ~0,3): professores da Universidade de Pisa de toga e barrete
+// pretos, estudantes, frades de hábito marrom, mulheres de vestido longo e
+// mercadores de capa colorida — muitos olhando para o alto da torre.
+const ROBE = ["#1c1c22", "#1c1c22", "#2b2b33", "#5a3a22", "#6b4423", "#7a1f24", "#1f3a5f", "#3d5a2a", "#8a6a3a", "#4a2a4a", "#b5651d"];
+const HAT = ["#121216", "#121216", "#6b1a1a", "#1f2a44", "#3a2414"];
+const PISA_PEOPLE = (() => {
+  const rand = lcg(1589);
+  const list = [];
+  // roda em volta da base da torre (deixando livre o lado onde as esferas caem)
+  for (let i = 0; i < 46; i++) {
+    const a = rand() * Math.PI * 2;
+    const r = 3.8 + rand() * 3.6;
+    const x = Math.cos(a) * r;
+    const z = -1.9 + Math.sin(a) * r;
+    if (z > 0.8 && Math.abs(x) < 2.2) continue; // frente: área da queda e da câmera
+    list.push({ x, z, look: Math.atan2(-x, -1.9 - z), k: rand() });
+  }
+  // pequenos grupos espalhados pela praça e diante da catedral
+  for (let i = 0; i < 40; i++) {
+    const x = -34 + rand() * 40;
+    const z = -14 + rand() * 24;
+    if (Math.hypot(x, z + 1.9) < 7 || (x > -26 && x < -8 && z > -12 && z < -3)) continue;
+    list.push({ x, z, look: rand() * Math.PI * 2, k: rand() });
+  }
+  return list;
+})();
+
+function Crowd() {
+  const [robes, bodies, heads, hats] = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const color = new THREE.Color();
+    const rand = lcg(31);
+    const n = PISA_PEOPLE.length;
+    const robe = new THREE.InstancedMesh(new THREE.ConeGeometry(0.075, 0.2, 8), new THREE.MeshLambertMaterial({ color: "#fff" }), n);
+    const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.045, 0.06, 0.1, 8), new THREE.MeshLambertMaterial({ color: "#fff" }), n);
+    const head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.035, 10, 8), new THREE.MeshLambertMaterial({ color: "#fff" }), n);
+    const hat = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.045, 0.042, 0.03, 10), new THREE.MeshLambertMaterial({ color: "#fff" }), n);
+    PISA_PEOPLE.forEach((p, i) => {
+      const s = 0.9 + p.k * 0.25;
+      const c = ROBE[Math.floor(rand() * ROBE.length)];
+      dummy.rotation.set(0, p.look, 0);
+      dummy.scale.set(s, s, s);
+      dummy.position.set(p.x, 0.1 * s, p.z);
+      dummy.updateMatrix();
+      robe.setMatrixAt(i, dummy.matrix);
+      robe.setColorAt(i, color.set(c));
+      dummy.position.set(p.x, 0.24 * s, p.z);
+      dummy.updateMatrix();
+      body.setMatrixAt(i, dummy.matrix);
+      body.setColorAt(i, color.set(c).multiplyScalar(0.85));
+      // cabeça levemente inclinada para trás: olhando para o alto da torre
+      dummy.position.set(p.x, 0.325 * s, p.z);
+      dummy.updateMatrix();
+      head.setMatrixAt(i, dummy.matrix);
+      head.setColorAt(i, color.set(rand() < 0.5 ? "#d9a77f" : "#c58c63"));
+      dummy.position.set(p.x, 0.365 * s, p.z);
+      dummy.updateMatrix();
+      hat.setMatrixAt(i, dummy.matrix);
+      hat.setColorAt(i, color.set(HAT[Math.floor(rand() * HAT.length)]));
+    });
+    for (const m of [robe, body, head, hat]) m.instanceColor.needsUpdate = true;
+    return [robe, body, head, hat];
+  }, []);
+  return (
+    <>
+      <primitive object={robes} />
+      <primitive object={bodies} />
+      <primitive object={heads} />
+      <primitive object={hats} />
+    </>
+  );
+}
+
+// Carroça de madeira com cavalo, parada na rua ao sul.
+function Cart({ position, rotation = 0 }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.16, 0]}>
+        <boxGeometry args={[0.7, 0.12, 0.38]} />
+        <meshLambertMaterial color="#6b4a2b" />
+      </mesh>
+      {[-0.22, 0.22].map((z) => (
+        <mesh key={z} position={[0, 0.1, z]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.1, 0.018, 6, 14]} />
+          <meshLambertMaterial color="#3b2a1a" />
+        </mesh>
+      ))}
+      {/* cavalo */}
+      <mesh position={[0.62, 0.2, 0]}>
+        <boxGeometry args={[0.42, 0.14, 0.12]} />
+        <meshLambertMaterial color="#5a3b24" />
+      </mesh>
+      <mesh position={[0.86, 0.3, 0]} rotation={[0, 0, 0.6]}>
+        <boxGeometry args={[0.18, 0.08, 0.08]} />
+        <meshLambertMaterial color="#5a3b24" />
+      </mesh>
+      {[0.46, 0.78].map((x) =>
+        [-0.04, 0.04].map((z) => (
+          <mesh key={`${x}${z}`} position={[x, 0.07, z]}>
+            <boxGeometry args={[0.03, 0.14, 0.03]} />
+            <meshLambertMaterial color="#3d2716" />
+          </mesh>
+        )),
+      )}
+    </group>
+  );
+}
+
 const PISA_CYPRESS = [
   [14, -17, 4.2], [18, -18, 4.8], [22, -16, 4], [-52, -19, 4.6], [-56, -17, 4.1], [-48, -20, 4.4],
   [24, 22, 4.4], [-30, 24, 4.2], [-48, 23, 4.6], [9, 24, 3.8],
@@ -570,6 +832,7 @@ export function PisaSetting() {
       street: finish(stone, 60, 2.5),
       ring: finish(stone, 3, 3),
       wall: finish(brick, 70, 1.5),
+      wallTile: finish(brick, 1, 1),
     };
   }, []);
   const overlay = { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 };
@@ -596,15 +859,12 @@ export function PisaSetting() {
       </mesh>
       <Duomo marble={marble} />
       <Baptistery marble={marble} />
-      {/* muralha medieval ao norte e a oeste */}
-      <mesh position={[-12, 1.5, -27]}>
-        <boxGeometry args={[150, 3, 0.8]} />
-        <meshLambertMaterial map={tex.wall} />
-      </mesh>
-      <mesh position={[-60, 1.5, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <boxGeometry args={[54, 3, 0.8]} />
-        <meshLambertMaterial map={tex.wall} />
-      </mesh>
+      <Camposanto marble={marble} />
+      {/* muralha medieval com ameias, torres e a Porta Santa Maria */}
+      <CityWalls brick={tex.wallTile} brickLong={tex.wall} />
+      <Crowd />
+      <Cart position={[-6, 0, 12.5]} rotation={0.2} />
+      <Cart position={[12, 0, 15]} rotation={Math.PI - 0.1} />
       <Houses />
       <Trees spots={PISA_CYPRESS} cypress />
       {/* Monte Pisano ao fundo */}

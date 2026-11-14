@@ -2,7 +2,7 @@ import { Suspense, useState } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, PerformanceMonitor, useProgress, useTexture } from "@react-three/drei";
-import { SkyDome, TrackSetting, PisaSetting, YardSetting, LabSetting } from "./settings.jsx";
+import { SkyDome, PeriodSky, TrackSetting, PisaSetting, YardSetting, LabSetting } from "./settings.jsx";
 
 // Luz HDR do autódromo (céu limpo de dia): serve de iluminação ambiente para
 // todos os cenários ao ar livre. O céu e o chão de cada aula ficam em settings.jsx.
@@ -128,7 +128,7 @@ export default function SceneShell({
             <SpaceBackdrop brightness={skyBrightness} />
           ) : (
             <>
-              {setting !== "lab" && <SkyDome />}
+              {setting === "pisa" ? <PeriodSky /> : setting !== "lab" && <SkyDome />}
               <Setting />
               <Environment files={TRACK_HDR} environmentIntensity={0.8} />
               {/* sombra do Sol sobre o chão do cenário */}
