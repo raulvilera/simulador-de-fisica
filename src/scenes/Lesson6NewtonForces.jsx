@@ -28,7 +28,7 @@ export default function Lesson6NewtonForces() {
   const [resetKey, setResetKey] = useState(0);
 
   const [dtA, setDtA] = useState(4); // tempo de empurrão (s)
-  const [meas, setMeas] = useState({ v: 0, t: 0, done: false }); // medido na cena
+  const [meas, setMeas] = useState({ v: 0, t: 0, x: 0, done: false }); // medido na cena
   const fRes = opposite ? f1 - f2 : f1 + f2;
   const accel = mass > 0 ? fRes / mass : 0;
 
@@ -46,6 +46,7 @@ export default function Lesson6NewtonForces() {
           opposite={opposite}
           pushTime={dtA}
           onMeasure={setMeas}
+          meas={meas}
         />
       </SceneShell>
 
@@ -105,6 +106,18 @@ export default function Lesson6NewtonForces() {
               FRes = {num(f1)} {opposite ? "−" : "+"} {num(f2)} = <b>{num(fRes)} N</b>
               <br />a = {num(fRes)} ÷ {nump(mass)} = <b>{num(accel)} m/s²</b>
             </>
+          }
+          live={
+            meas.t > 0 ? (
+              <>
+                t = <b>{num(meas.t)} s</b> {meas.done ? "(as pessoas pararam de empurrar)" : "empurrando"}
+                <br />v = a · t = {num(accel)} × {nump(meas.t)} = <b>{num(meas.v)} m/s</b>
+                <br />deslocamento = ½ · a · t² = <b>{num(0.5 * accel * Math.min(meas.t, dtA) ** 2, 1)} m</b>
+                {meas.done && <> + depois {num(meas.x - 0.5 * accel * dtA * dtA, 1)} m sem força (inércia)</>}
+              </>
+            ) : (
+              <>Aperte ▶ Aplicar forças para ver t, v e o deslocamento mudarem.</>
+            )
           }
           note="Use a caixa “Forças em sentidos opostos” acima para subtrair F2."
           onReset={() => {
@@ -170,7 +183,7 @@ const arrowLen = (f) => Math.min(Math.max(Math.abs(f) * SCALE, 0.45), 5);
 // velocidade que ganhou (sem atrito). O deslocamento mostrado é comprimido
 // quando seria grande demais para o galpão, e empurrões longos são acelerados
 // na tela — os valores medidos (v, t) são sempre os reais.
-function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure }) {
+function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onMeasure, meas }) {
   const ref = useRef();
   const state = useRef({ x: 0, v: 0, t: 0, done: false });
   const report = useThrottled(onMeasure);
@@ -179,7 +192,7 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
   const rate = pushTime > 8 ? pushTime / 8 : 1;
   const [pushing, setPushing] = useState(true);
   // nova montagem (novos valores ou reinício): zera a medição do painel
-  useEffect(() => onMeasure?.({ v: 0, t: 0, done: false }), [onMeasure]);
+  useEffect(() => onMeasure?.({ v: 0, t: 0, x: 0, done: false }), [onMeasure]);
 
   useFrame((_, delta) => {
     if (!playing) return;
@@ -199,7 +212,9 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
     }
     const vx = Math.min(LIMIT, Math.max(-LIMIT, START_X + s.x * kVis));
     if (ref.current) ref.current.position.x = vx;
-    report({ v: s.v, t: s.t, done: s.done }, s.done);
+    const justDone = s.done && !s.sent; // força um último aviso quando o empurrão termina
+    if (justDone) s.sent = true;
+    report({ v: s.v, t: s.t, x: s.x, done: s.done }, justDone);
   });
 
   const side2 = opposite ? 1 : -1; // lado do caixote onde fica quem aplica F2
@@ -259,6 +274,16 @@ function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite, pushTime, onM
         position={[(Math.sign(fRes) * arrowLen(fRes)) / 2, 2.75, 0]}
         value={`= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N`}
       />
+      {meas && meas.t > 0 && (
+        <QuantityTag
+          id="agora"
+          position={[0.75, HALF * 2 + 0.35, 0.7]}
+          color="#38bdf8"
+          symbol="v"
+          value={`= ${num(meas.v)} m/s`}
+          name={`t = ${num(meas.t, 1)} s · andou ${num(meas.x, 1)} m${meas.done ? " · parou de empurrar" : ""}`}
+        />
+      )}
       <QuantityTag q={Q.m} position={[-0.55, HALF * 2 + 0.3, 0]} value={`= ${mass} kg`} />
       <QuantityTag
         q={Q.a}

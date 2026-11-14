@@ -24,16 +24,19 @@ export default function Lesson8LabVelocity() {
   const [running, setRunning] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [prog, setProg] = useState(0); // fração da pista já percorrida
   const [trials, setTrials] = useState([]);
 
   const launch = () => {
     setElapsed(0);
+    setProg(0);
     setRunning(true);
   };
 
   const onFinish = (time) => {
     setRunning(false);
     setElapsed(time);
+    setProg(1);
     setTrials((prev) =>
       prev.length >= 5
         ? prev
@@ -70,9 +73,17 @@ export default function Lesson8LabVelocity() {
           onFinish={onFinish}
           ds={dsCalc}
           dtTarget={dtTyped}
-          onTick={setElapsed}
+          onTick={(o) => {
+            setElapsed(o.t);
+            setProg(o.p);
+          }}
         >
-          <QuantityTag q={Q.dt} position={[0, 1.9, 0]} value={`= ${c2(elapsed)} s`} />
+          <QuantityTag
+            q={Q.dt}
+            position={[0, 1.9, 0]}
+            value={`= ${c2(elapsed)} s`}
+            name={prog > 0 ? `ΔS até agora = ${num(prog * dsCalc, 1)} cm` : "tempo no cronômetro"}
+          />
         </FrictionCart>
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => SCENE_LENGTH} y={1.9} z={-0.6} color={Q.ds.color} />
@@ -159,6 +170,17 @@ export default function Lesson8LabVelocity() {
               V = {num(dsCalc)} ÷ {nump(dtCalc)} = <b>{num(dsCalc / dtCalc)} cm/s</b>
             </>
           }
+          live={
+            running || prog > 0 ? (
+              <>
+                Δt = <b>{c2(elapsed)} s</b> · ΔS até agora = <b>{num(prog * dsCalc, 1)} cm</b>
+                <br />V = {num(prog * dsCalc, 1)} ÷ {nump(elapsed)} ={" "}
+                <b>{num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s</b>
+              </>
+            ) : (
+              <>Aperte ▶ Soltar carrinho: o cronômetro e o ΔS mudam enquanto ele anda.</>
+            )
+          }
           note="A pista passa a ter o ΔS digitado. Digitando Δt, o carrinho leva exatamente esse tempo nas próximas medições (sem digitar, cada tentativa varia um pouco, como no experimento real)."
           onReset={() => {
             setDsCalc(TRACK_LENGTH_CM);
@@ -189,19 +211,27 @@ function FrictionCart({ running, resetKey, onFinish, onTick, ds, dtTarget, child
   const t = useRef(0);
   const T = useRef(null);
   const tick = useThrottled(onTick, 80);
+  const finished = useRef(false);
+  // cada novo lançamento recomeça do zero (e só depois de terminado o anterior)
+  useEffect(() => {
+    if (running) {
+      finished.current = false;
+      t.current = 0;
+      T.current = null;
+    }
+  }, [running]);
 
   useFrame((_, delta) => {
-    if (!running) return;
+    if (!running || finished.current) return;
     if (T.current == null) T.current = dtTarget ?? ds / randomSpeed();
     const rate = T.current > 8 ? T.current / 8 : T.current < 0.6 ? T.current / 0.6 : 1;
     t.current = Math.min(t.current + delta * rate, T.current);
     const x = (t.current / T.current) * SCENE_LENGTH;
     if (ref.current) ref.current.position.x = x;
-    tick(t.current);
+    tick({ t: t.current, p: t.current / T.current });
     if (t.current >= T.current) {
+      finished.current = true; // não manda mais nada até o próximo lançamento
       onFinish?.(T.current);
-      T.current = null;
-      t.current = 0;
     }
   });
 

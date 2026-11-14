@@ -289,6 +289,16 @@ export default function Lesson3Displacement() {
             setPath(EXAMPLE);
             reset(EXAMPLE);
           }}
+          live={
+            moved ? (
+              <>
+                posição agora: S = <b>{num(stats.position, 1)} m</b>
+                <br />ΔS até agora = {num(stats.position, 1)} − {nump(PATH[0])} = <b>{num(stats.displacement, 1)} m</b>
+              </>
+            ) : (
+              <>Aperte ▶ Ir: a posição e o deslocamento mudam enquanto o carro anda.</>
+            )
+          }
           note="Qualquer valor (até negativo): a régua da pista muda de escala para todos os pontos caberem, e o carro percorre o trajeto digitado."
         />
 
@@ -337,6 +347,17 @@ export default function Lesson3Displacement() {
               <br />
               ΔS = <b>{num(PATH[2] - PATH[0])} m</b> {leg1Len + leg2Len !== Math.abs(PATH[2] - PATH[0]) ? "≠" : "="} d
             </>
+          }
+          live={
+            moved ? (
+              <>
+                {stats.leg === 0 ? "trecho 1 (indo para C)" : finished ? "chegou em B" : "trecho 2 (voltando para B)"}
+                <br />d até agora = {num(leg1, 1)}{leg2 > 0 ? <> + {num(leg2, 1)}</> : null} = <b>{num(stats.distance, 1)} m</b> · ΔS ={" "}
+                <b>{num(stats.displacement, 1)} m</b>
+              </>
+            ) : (
+              <>Aperte ▶ Ir: a distância cresce sempre; o deslocamento pode diminuir na volta.</>
+            )
           }
           onReset={() => {
             setPath(EXAMPLE);

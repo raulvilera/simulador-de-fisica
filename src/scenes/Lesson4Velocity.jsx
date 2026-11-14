@@ -23,7 +23,12 @@ export default function Lesson4Velocity() {
   const [time, setTime] = useState(2); // h (Δt)
   const [playing, setPlaying] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const [instSpeed, setInstSpeed] = useState(0);
+  // valores do instante atual: v instantânea, fração da viagem e posição na pista
+  const [trip, setTrip] = useState({ v: 0, p: 0, x: 0 });
+  const instSpeed = trip.v;
+  const carX = useRef(0); // posição do carro na cena (para a seta ΔS até agora)
+  const dsNow = (trip.x / 13) * distance; // km percorridos até agora
+  const dtNow = trip.p * time; // horas desde a partida
 
   const vMedia = time > 0 ? (distance / time).toFixed(1) : "0";
 
@@ -43,15 +48,30 @@ export default function Lesson4Velocity() {
           resetKey={resetKey}
           durationSeconds={6}
           vm={distance / time}
-          onSpeedUpdate={setInstSpeed}
+          onSpeedUpdate={setTrip}
+          carX={carX}
         >
           <QuantityTag q={Q.vi} position={[0, 1.45, 0]} value={`= ${num(instSpeed, 1)} km/h`} />
+          {trip.p > 0 && (
+            <QuantityTag
+              id="agora"
+              position={[0, 2.35, 0]}
+              color="#e5e9f5"
+              symbol="agora"
+              value={`t = ${num(dtNow)} h · ΔS = ${num(dsNow, 1)} km`}
+              name="tempo e deslocamento desde a partida"
+            />
+          )}
         </AnimatedCar>
+        {/* seta do deslocamento até o instante atual (cresce com o carro) */}
+        <Concept id="ds">
+          <SpanArrow getFrom={() => 0} getTo={() => carX.current} y={1.85} color={Q.ds.color} width={0.06} />
+        </Concept>
 
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => 13} y={2.3} color={Q.ds.color} />
         </Concept>
-        <QuantityTag q={Q.ds} position={[4, 2.7, 0]} value={`= ${distance} km`} />
+        <QuantityTag q={Q.ds} position={[4, 2.7, 0]} value={`= ${num(distance)} km`} name="deslocamento da viagem inteira" />
         <QuantityTag q={Q.dt} position={[9.5, 2.7, 0]} value={`= ${fmt(time)} h`} name="do início ao fim da viagem" />
         <QuantityTag q={Q.vm} position={[6.5, 3.6, 0]} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
       </SceneShell>
@@ -70,6 +90,8 @@ export default function Lesson4Velocity() {
               className="btn btn--ghost"
               onClick={() => {
                 setPlaying(false);
+                setTrip({ v: 0, p: 0, x: 0 });
+                carX.current = 0;
                 setResetKey((k) => k + 1);
               }}
             >
@@ -111,6 +133,17 @@ export default function Lesson4Velocity() {
               <br />= {num(distance / time)} ÷ 3,6 = <b>{num(distance / time / 3.6)} m/s</b>
             </>
           }
+          live={
+            trip.p > 0 ? (
+              <>
+                Δt até agora = <b>{num(dtNow)} h</b> · ΔS até agora = <b>{num(dsNow, 1)} km</b>
+                <br />v média até agora = {num(dsNow, 1)} ÷ {nump(dtNow)} = <b>{num(dtNow > 0 ? dsNow / dtNow : 0, 1)} km/h</b>
+                <br />velocímetro (instantânea): <b>{num(instSpeed, 1)} km/h</b>
+              </>
+            ) : (
+              <>Aperte ▶ Simular viagem: Δt, ΔS e as velocidades mudam enquanto o carro anda.</>
+            )
+          }
           onReset={() => {
             setDistance(200);
             setTime(2);
@@ -133,20 +166,23 @@ export default function Lesson4Velocity() {
 // exatamente v: x(p) = 13·(p + A·sen(2πnp)/(2πn)).
 const A = 0.3;
 const N = 3;
-function AnimatedCar({ playing, resetKey, durationSeconds, vm, onSpeedUpdate, children }) {
+function AnimatedCar({ playing, resetKey, durationSeconds, vm, onSpeedUpdate, carX, children }) {
   const ref = useRef();
   const t = useRef(0);
+  const sent = useRef(false);
   const report = useThrottled(onSpeedUpdate);
 
   useFrame((_, delta) => {
-    if (!playing) return;
+    if (!playing || sent.current) return;
     t.current += delta;
     const progress = Math.min(t.current / durationSeconds, 1);
     const x = 13 * (progress + (A * Math.sin(2 * Math.PI * N * progress)) / (2 * Math.PI * N));
     // Velocidade instantânea "ruidosa" em torno de uma média, só para efeito visual/didático.
     const inst = vm * (1 + A * Math.cos(2 * Math.PI * N * progress));
     if (ref.current) ref.current.position.x = x;
-    report(progress < 1 ? Math.max(inst, 0) : 0, progress >= 1);
+    if (carX) carX.current = x;
+    if (progress >= 1) sent.current = true; // chegou: último aviso e para
+    report({ v: progress < 1 ? Math.max(inst, 0) : 0, p: progress, x }, progress >= 1);
   });
 
   return (

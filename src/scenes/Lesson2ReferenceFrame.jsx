@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
@@ -30,13 +31,15 @@ const CAR_Y = 0.3; // altura do "centro" do carro para a linha de visada
 const sgn = (v) => (v >= 0 ? "+" : "−") + f1(Math.abs(v));
 const Q_LIST = Object.values(Q);
 
-function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
+function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const followed = useRef(0);
+  const clock = useRef(0); // tempo de movimento (s)
+  const tick = useThrottled(onTick, 100);
   const [angJ, setAngJ] = useState(null);
   const [angO, setAngO] = useState(null);
   // olho de quem observa: a pessoa (solo) ou o João dentro do carro
@@ -45,6 +48,8 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO }) {
 
   useFrame((_, delta) => {
     if (playing) {
+      clock.current += delta;
+      tick({ t: clock.current });
       x.current.joao += V_JOAO * delta;
       x.current.outro += V_OUTRO * delta;
       // a pista "dá a volta": quem sai por um lado entra pelo outro (vale para
@@ -166,12 +171,13 @@ export default function Lesson2ReferenceFrame() {
 
   const [V_JOAO, setVJ] = useState(EX_JOAO);
   const [V_OUTRO, setVO] = useState(EX_OUTRO);
+  const [clock, setClock] = useState({ t: 0 }); // tempo desde que os carros começaram a andar
   const relativeSpeed = frame === "solo" ? f1(V_OUTRO) : f1(V_OUTRO - V_JOAO);
 
   return (
     <div className="lesson__canvas">
       <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]}>
-        <Road playing={playing} frame={frame} vJ={V_JOAO} vO={V_OUTRO} />
+        <Road playing={playing} frame={frame} vJ={V_JOAO} vO={V_OUTRO} onTick={setClock} />
       </SceneShell>
 
       <div className="panel">
@@ -238,6 +244,19 @@ export default function Lesson2ReferenceFrame() {
                   ? "João vê o outro carro ficar para trás."
                   : "João vê o outro carro parado ao lado dele."}
             </>
+          }
+          live={
+            clock.t > 0 ? (
+              <>
+                t = <b>{num(clock.t)} s</b> de movimento
+                <br />João andou ΔS = v · t = {num(V_JOAO)} × {nump(clock.t)} = <b>{num(V_JOAO * clock.t, 1)} m</b>
+                <br />o outro andou {num(V_OUTRO)} × {nump(clock.t)} = <b>{num(V_OUTRO * clock.t, 1)} m</b>
+                <br />para João, o outro se afastou v<sub>rel</sub> · t = {num(V_OUTRO - V_JOAO)} × {nump(clock.t)} ={" "}
+                <b>{num((V_OUTRO - V_JOAO) * clock.t, 1)} m</b>
+              </>
+            ) : (
+              <>Aperte ▶ Iniciar para ver o tempo e as distâncias mudarem enquanto os carros andam.</>
+            )
           }
           note="Os carros da cena usam os valores digitados (negativo = sentido contrário). Valores muito altos ficam rápidos demais para acompanhar a olho."
           onReset={() => {

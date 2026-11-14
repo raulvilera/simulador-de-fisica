@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { useThrottled } from "./useThrottled.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
@@ -40,6 +41,7 @@ export default function Lesson9LabAcceleration() {
   // ser digitadas — o carrinho da cena anda exatamente com a velocidade digitada.
   const [v1c, setV1c] = useState(8);
   const [v2c, setV2c] = useState(14);
+  const [run, setRun] = useState(null); // medição em andamento: { t, d, v, boost }
   const v1 = readings.length >= 1 ? v1c : null;
   const v2 = readings.length >= 2 ? v2c : null;
   const deltaV = v1 != null && v2 != null ? v2 - v1 : null;
@@ -53,6 +55,7 @@ export default function Lesson9LabAcceleration() {
           running={running}
           boost={boost}
           speed={boost === 2 ? v2c : v1c}
+          onTick={setRun}
           resetKey={resetKey}
           onFinish={onFinish}
         />
@@ -128,6 +131,20 @@ export default function Lesson9LabAcceleration() {
               <br />a = {num(v2c - v1c)} ÷ {nump(dt)} = <b>{num((v2c - v1c) / dt)} cm/s²</b>
             </>
           }
+          live={
+            run && (running || deltaV == null) ? (
+              <>
+                Medição {run.boost}: t = <b>{num(run.t)} s</b> · distância = <b>{num(run.d, 1)} cm</b>
+                <br />V{run.boost} = {num(run.d, 1)} ÷ {nump(run.t)} = <b>{num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s</b>
+              </>
+            ) : deltaV != null ? (
+              <>
+                ΔV = {num(v2c)} − {nump(v1c)} = <b>{num(deltaV)} cm/s</b> em Δt = {num(dt)} s → a = <b>{num(accel)} cm/s²</b>
+              </>
+            ) : (
+              <>Faça as medições: o tempo e a distância de cada uma aparecem aqui enquanto o carrinho anda.</>
+            )
+          }
           note="O carrinho de cada medição anda com a velocidade digitada (negativa = de ré). Digite os valores medidos em sala e repita as medições."
           onReset={() => {
             setV1c(8);
@@ -150,22 +167,31 @@ export default function Lesson9LabAcceleration() {
 // 8 unidades de pista = 24 cm. O carrinho anda com a velocidade `speed` (cm/s)
 // digitada; negativa = de trás para a frente. Percursos muito longos/curtos
 // são acelerados/desacelerados na tela, sem mudar o valor medido.
-function FrictionCart({ running, boost, speed, resetKey, onFinish }) {
+function FrictionCart({ running, boost, speed, resetKey, onFinish, onTick }) {
   const ref = useRef();
   const t = useRef(0);
   const T = Math.abs(speed) > 1e-9 ? 24 / Math.abs(speed) : 0; // tempo real (s)
   const rate = T > 8 ? T / 8 : T < 0.6 && T > 0 ? T / 0.6 : 1;
   const startX = speed < 0 ? SCENE_LENGTH : 0;
+  const tick = useThrottled(onTick, 90);
+  const finished = useRef(false);
+  useEffect(() => {
+    if (running) {
+      finished.current = false;
+      t.current = 0;
+    }
+  }, [running]);
 
   useFrame((_, delta) => {
-    if (!running) return;
+    if (!running || finished.current) return;
     t.current = Math.min(t.current + delta * rate, T);
     const p = T > 0 ? t.current / T : 1;
     const x = speed < 0 ? SCENE_LENGTH * (1 - p) : SCENE_LENGTH * p;
     if (ref.current) ref.current.position.x = x;
+    tick({ t: t.current, d: 24 * p, v: speed, boost }, t.current >= T);
     if (t.current >= T) {
+      finished.current = true;
       onFinish?.(speed, boost);
-      t.current = 0;
     }
   });
 

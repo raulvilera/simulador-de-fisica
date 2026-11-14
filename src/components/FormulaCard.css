@@ -138,3 +138,29 @@
     padding: 10px 8px;
   }
 }
+
+.fcard__live {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px dashed rgba(56, 189, 248, 0.5);
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #e0f2fe;
+  font-variant-numeric: tabular-nums;
+}
+
+.fcard__live b {
+  color: #38bdf8;
+}
+
+.fcard__liveHead {
+  margin: 0 0 3px;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+}
