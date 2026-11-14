@@ -71,19 +71,20 @@ export default function SceneShell({
   // No autódromo a câmera fica mais perto do centro da foto (onde a projeção é fiel).
   if (maxDistance == null) maxDistance = space ? 30 : 20;
   // Começa na resolução nativa da tela; só reduz se a placa de vídeo não der conta.
-  const maxDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  // No celular a tela é pequena e a GPU é mais fraca: limita a resolução para manter
+  // a animação fluida e economizar bateria.
+  const isSmall = window.matchMedia?.("(max-width: 820px), (max-height: 520px)").matches;
+  const maxDpr = Math.min(window.devicePixelRatio || 1, isSmall ? 1.25 : 1.5);
   const [dpr, setDpr] = useState(maxDpr);
   const Setting = SETTINGS[setting] ?? TrackSetting;
 
-  // O painel lateral (340 px) cobre a direita da tela. Nas cenas de astronomia a
-  // tela 3D é deslocada meia largura do painel para a esquerda, para o centro
-  // da cena ficar no meio da área livre.
-  const frame = space
-    ? { position: "absolute", top: 0, bottom: 0, left: -170, right: 170 }
-    : { position: "absolute", top: 0, bottom: 0, left: 0, right: 340 };
-
+  // A área da cena 3D é definida em LessonLayout.css (.scene-frame):
+  // - computador/tablet deitado: painel lateral à direita; nas cenas de astronomia a
+  //   tela 3D é deslocada meia largura do painel para a esquerda, para o centro da
+  //   cena ficar no meio da área livre;
+  // - celular em pé: cena em cima e painel como gaveta embaixo.
   return (
-    <div style={frame}>
+    <div className={`scene-frame${space ? " scene-frame--space" : ""}`}>
       <Loading />
       <Canvas
         shadows={!space}

@@ -1,5 +1,6 @@
 .hub {
   min-height: 100vh;
+  min-height: 100dvh;
   background: radial-gradient(circle at 20% 0%, #1b2340 0%, #0a0e1a 55%, #05070d 100%);
   color: #f1f3fb;
   padding: 48px 56px 80px;
@@ -142,4 +143,98 @@
   font-size: 0.92rem;
   font-weight: 500;
   color: #aab3cf;
+}
+
+.lessonCard {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 820px) {
+  .hub {
+    padding: calc(24px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+  }
+  .hub__header {
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+  }
+  .hub__header h1 {
+    font-size: 1.8rem;
+  }
+  .hub__subtitle {
+    font-size: 0.95rem;
+  }
+  .hub__eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .hub__modeToggle {
+    width: 100%;
+  }
+  .hub__modeToggle button {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+  .hub__unit {
+    margin-bottom: 32px;
+  }
+  .hub__unitTitle {
+    font-size: 1.15rem;
+  }
+  .hub__unitTitle span {
+    display: block;
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+  }
+  .hub__grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .lessonCard {
+    padding: 16px 16px 18px;
+    border-radius: 14px;
+  }
+  .lessonCard:hover {
+    transform: none;
+  }
+  .lessonCard h2 {
+    font-size: 1.02rem;
+    padding-right: 70px;
+  }
+  .lessonCard p {
+    font-size: 0.85rem;
+  }
+  .lessonCard__badge {
+    top: 14px;
+    right: 14px;
+  }
+}
+
+/* Botão "Instalar app" */
+.installBtn {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 20;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: white;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.45);
+  cursor: pointer;
+}
+
+.installHint {
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(125, 211, 252, 0.08);
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  color: #c7cde3;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }

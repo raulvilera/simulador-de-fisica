@@ -27,7 +27,7 @@ export default function Lesson4Velocity() {
         />
       </SceneShell>
 
-      <div className="panel" style={panelOverlayStyle}>
+      <div className="panel">
         <p className="panel__eyebrow">Aula 4 · Velocidade</p>
         <h1>Velocidade média x instantânea</h1>
         <div className="controls">
@@ -92,14 +92,3 @@ function AnimatedCar({ playing, resetKey, durationSeconds, onSpeedUpdate }) {
     </group>
   );
 }
-
-const panelOverlayStyle = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 340,
-  height: "100%",
-  background: "rgba(10,14,26,0.72)",
-  backdropFilter: "blur(8px)",
-  borderLeft: "1px solid rgba(255,255,255,0.08)",
-};

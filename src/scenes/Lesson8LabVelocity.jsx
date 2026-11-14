@@ -44,7 +44,7 @@ export default function Lesson8LabVelocity() {
         />
       </SceneShell>
 
-      <div className="panel" style={panelOverlayStyle}>
+      <div className="panel">
         <p className="panel__eyebrow">Aula 8 · Desafio experimental</p>
         <h1>Carrinho de fricção: medindo v</h1>
         <div className="controls">
@@ -129,14 +129,3 @@ function FrictionCart({ running, resetKey, onFinish, onTick }) {
     </group>
   );
 }
-
-const panelOverlayStyle = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 340,
-  height: "100%",
-  background: "rgba(10,14,26,0.72)",
-  backdropFilter: "blur(8px)",
-  borderLeft: "1px solid rgba(255,255,255,0.08)",
-};

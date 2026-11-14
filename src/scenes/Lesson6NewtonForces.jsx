@@ -21,7 +21,7 @@ export default function Lesson6NewtonForces() {
         <PushedBox key={resetKey} playing={playing} accel={accel} f1={f1} f2={f2} fRes={fRes} opposite={opposite} />
       </SceneShell>
 
-      <div className="panel" style={panelOverlayStyle}>
+      <div className="panel">
         <p className="panel__eyebrow">Aula 6 · 2ª e 3ª Leis de Newton</p>
         <h1>Força resultante e aceleração</h1>
         <div className="controls">
@@ -132,14 +132,3 @@ function PushedBox({ playing, accel, f1, f2, fRes, opposite }) {
     </group>
   );
 }
-
-const panelOverlayStyle = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 340,
-  height: "100%",
-  background: "rgba(10,14,26,0.72)",
-  backdropFilter: "blur(8px)",
-  borderLeft: "1px solid rgba(255,255,255,0.08)",
-};
