@@ -1,87 +1,103 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import "./ViewHeight.css";
 
 /**
- * Dentro do Canvas: leva a câmera (suavemente) até a altura `y` sempre que
- * `y` muda — sobe e desce pela cena sem girar nem mudar o zoom.
- * `onMove(y)` avisa a altura atual do ponto observado (para a barra acompanhar
- * quando a câmera se move por outro motivo, como seguir a queda).
+ * Subir e descer a vista com o próprio gesto, sem botões:
+ * - celular: deslizar UM dedo para cima/baixo sobre a cena;
+ * - computador: rolar a roda do mouse (ou arrastar com o botão esquerdo).
+ * Arrastar para os lados continua girando a cena; o zoom fica na pinça (dois
+ * dedos) ou em Ctrl + roda do mouse.
+ * `resetKey` devolve a vista à altura `startY`.
  */
-export function ViewHeight({ y, enabled = true, onMove }) {
+export default function DragHeight({ enabled = true, min = 0, max = 10, startY, resetKey }) {
   const controls = useThree((s) => s.controls);
+  const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const on = useRef(enabled);
   const goal = useRef(null);
-  const lastSent = useRef(null);
-  const clock = useRef(0);
+  const first = useRef(true);
 
   useEffect(() => {
-    // valor que veio da própria câmera (sincronização da barra) não é pedido
-    if (y !== lastSent.current) goal.current = y;
-  }, [y]);
+    on.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    if (first.current) first.current = false;
+    else if (startY != null) goal.current = startY;
+  }, [resetKey, startY]);
 
   useEffect(() => {
     if (!controls) return undefined;
-    // o professor pegou a câmera com o dedo/mouse: a barra para de conduzir
-    const start = () => (goal.current = null);
-    controls.addEventListener("start", start);
-    return () => controls.removeEventListener("start", start);
-  }, [controls]);
+    const el = gl.domElement;
+    // o arrasto vertical passa a mover a vista (em vez de inclinar a câmera)
+    const polar = controls.getPolarAngle();
+    const saved = [controls.minPolarAngle, controls.maxPolarAngle];
+    controls.minPolarAngle = polar;
+    controls.maxPolarAngle = polar;
 
-  useFrame(({ camera }, delta) => {
-    if (!controls) return;
-    if (!enabled) goal.current = null;
-    if (enabled && goal.current != null) {
-      const d = goal.current - controls.target.y;
-      if (Math.abs(d) < 0.005) goal.current = null;
-      else {
-        const step = d * (1 - Math.exp(-Math.min(delta, 0.1) * 9));
-        controls.target.y += step;
-        camera.position.y += step;
-      }
+    const shift = (dy) => {
+      if (!on.current) return;
+      goal.current = null;
+      const y = Math.min(max, Math.max(min, controls.target.y + dy));
+      const d = y - controls.target.y;
+      controls.target.y += d;
+      camera.position.y += d;
+    };
+    // quanto vale 1 pixel da tela em unidades da cena, na distância do alvo
+    const perPixel = () => {
+      const dist = camera.position.distanceTo(controls.target);
+      return (2 * dist * Math.tan((camera.fov * Math.PI) / 360)) / el.clientHeight;
+    };
+
+    const pointers = new Map();
+    const down = (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pointers.set(e.pointerId, e.clientY);
+    };
+    const move = (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      const dy = e.clientY - pointers.get(e.pointerId);
+      pointers.set(e.pointerId, e.clientY);
+      if (pointers.size === 1) shift(dy * perPixel()); // dedo desce → a cena desce junto
+    };
+    const up = (e) => pointers.delete(e.pointerId);
+    const wheel = (e) => {
+      if (e.ctrlKey || e.metaKey) return; // Ctrl + roda = zoom
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const px = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+      shift(-px * perPixel() * 0.6); // rolar para baixo → a vista desce
+    };
+    el.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    el.addEventListener("wheel", wheel, { capture: true, passive: false });
+    return () => {
+      controls.minPolarAngle = saved[0];
+      controls.maxPolarAngle = saved[1];
+      el.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      el.removeEventListener("wheel", wheel, { capture: true });
+    };
+  }, [controls, camera, gl, min, max]);
+
+  // volta suave à altura inicial depois de "Reiniciar"
+  useFrame((_, delta) => {
+    if (!controls || goal.current == null) return;
+    if (!on.current) {
+      goal.current = null;
+      return;
     }
-    clock.current += delta;
-    if (onMove && clock.current > 0.15 && goal.current == null) {
-      clock.current = 0;
-      const ty = controls.target.y;
-      if (lastSent.current == null || Math.abs(ty - lastSent.current) > 0.05) {
-        lastSent.current = ty;
-        onMove(ty);
-      }
+    const d = goal.current - controls.target.y;
+    if (Math.abs(d) < 0.005) goal.current = null;
+    else {
+      const step = d * (1 - Math.exp(-Math.min(delta, 0.1) * 9));
+      controls.target.y += step;
+      camera.position.y += step;
     }
   });
   return null;
-}
-
-/** Barra vertical (fora do Canvas) para subir e descer a vista. */
-export function HeightBar({ value, min, max, onChange, topLabel = "Topo", bottomLabel = "Base", disabled = false }) {
-  const step = (max - min) / 8;
-  const clamp = (v) => Math.min(max, Math.max(min, v));
-  return (
-    <div className={`vbar${disabled ? " is-off" : ""}`} role="group" aria-label="Subir e descer a vista">
-      <button type="button" className="vbar__btn" onClick={() => onChange(max)} disabled={disabled} title={`Ver o ${topLabel.toLowerCase()}`}>
-        {topLabel}
-      </button>
-      <button type="button" className="vbar__arrow" onClick={() => onChange(clamp(value + step))} disabled={disabled} aria-label="Subir a vista">
-        ▲
-      </button>
-      <div className="vbar__track">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step="0.01"
-          value={clamp(value)}
-          disabled={disabled}
-          onChange={(e) => onChange(Number(e.target.value))}
-          aria-label="Altura da vista"
-        />
-      </div>
-      <button type="button" className="vbar__arrow" onClick={() => onChange(clamp(value - step))} disabled={disabled} aria-label="Descer a vista">
-        ▼
-      </button>
-      <button type="button" className="vbar__btn" onClick={() => onChange(min)} disabled={disabled} title={`Ver a ${bottomLabel.toLowerCase()}`}>
-        {bottomLabel}
-      </button>
-    </div>
-  );
 }

@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import KeepInView from "./KeepInView.jsx";
-import { ViewHeight, HeightBar } from "./ViewHeight.jsx";
+import DragHeight from "./ViewHeight.jsx";
 import { useProtected } from "./LabelLayout.jsx";
 import { useMarbleTexture } from "./settings.jsx";
 import { Arrow3D, Ball } from "./primitives.jsx";
@@ -321,7 +321,6 @@ export default function Lesson1History() {
   const aristotleMode = theory === "aristoteles";
   const [showTheory, setShowTheory] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const [viewY, setViewY] = useState(VIEW_START); // altura observada (barra ao lado)
   const [landTime, setLandTime] = useState(null); // { heavy, light } (s)
   const [hC, setHC] = useState(TOWER_REAL); // altura da queda (m)
   const [gC, setGC] = useState(G);
@@ -338,7 +337,6 @@ export default function Lesson1History() {
     setLandTime(null);
     setLive(START);
     setResetKey((k) => k + 1);
-    setViewY(VIEW_START);
   };
   // clicar num cientista: troca a teoria e já repete o experimento com ela
   const pick = (id) => {
@@ -367,8 +365,8 @@ export default function Lesson1History() {
         />
         {/* a câmera acompanha a esfera até o chão */}
         <KeepInView targets={[followRef]} axes={[0, 1, 0]} enabled={falling} />
-        {/* fora da queda, a vista sobe e desce livremente pela torre */}
-        <ViewHeight y={viewY} enabled={!falling} onMove={setViewY} />
+        {/* fora da queda: deslizar o dedo ou rolar o mouse sobe e desce a vista pela torre */}
+        <DragHeight enabled={!falling} min={VIEW_MIN} max={VIEW_MAX} startY={VIEW_START} resetKey={resetKey} />
         <FallingBalls
           objRef={followRef}
           key={`${resetKey}-${hC}-${gC}-${theory}`}
@@ -440,9 +438,6 @@ export default function Lesson1History() {
           />
         )}
       </SceneShell>
-
-      {/* subir e descer a vista para percorrer a torre, com ou sem o experimento */}
-      <HeightBar value={viewY} min={VIEW_MIN} max={VIEW_MAX} onChange={setViewY} disabled={falling} />
 
       {/* retratos clicáveis: escolhem a teoria simulada */}
       <TheoryPortraits value={theory} onPick={pick} />
