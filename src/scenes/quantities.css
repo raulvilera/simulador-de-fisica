@@ -1,0 +1,150 @@
+/* Etiqueta de grandeza dentro da cena 3D */
+.qtag {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 22px 5px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--qc);
+  background: rgba(8, 11, 22, 0.86);
+  color: #f1f3fb;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+}
+
+.qtag:hover {
+  transform: scale(1.05);
+}
+
+.qtag__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.qtag__symbol {
+  font-family: "Cambria Math", "STIX Two Math", serif;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--qc);
+}
+
+.qtag__value {
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.qtag__name {
+  font-size: 0.66rem;
+  color: #b8c0dc;
+}
+
+.qtag__x {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: #8891b5;
+}
+
+.qtag:hover .qtag__x {
+  color: #fff;
+}
+
+/* Painel: botões liga/desliga */
+.qtoggles__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.qchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #8891b5;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.qchip b {
+  font-family: "Cambria Math", "STIX Two Math", serif;
+}
+
+.qchip.is-on {
+  border-color: var(--qc);
+  color: #f1f3fb;
+  background: color-mix(in srgb, var(--qc) 16%, transparent);
+}
+
+.qchip__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--qc);
+}
+
+.qchip.is-on .qchip__dot {
+  background: var(--qc);
+}
+
+.qtoggles .btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.qtoggles__hint {
+  font-size: 0.74rem;
+  color: #8891b5;
+  margin: 6px 0 0;
+}
+
+/* Termo colorido da fórmula */
+.qterm {
+  font: inherit;
+  color: var(--qc);
+  font-weight: 700;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--qc);
+  padding: 0 1px;
+  cursor: pointer;
+}
+
+.qterm.is-off {
+  opacity: 0.45;
+  border-bottom-style: dashed;
+}
+
+/* Celular: etiquetas mais compactas (só símbolo e valor) */
+@media (max-width: 820px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+  .qtag {
+    padding: 3px 18px 3px 7px;
+    border-radius: 8px;
+  }
+  .qtag__symbol {
+    font-size: 0.86rem;
+  }
+  .qtag__value {
+    font-size: 0.74rem;
+  }
+  .qtag__name {
+    display: none;
+  }
+}

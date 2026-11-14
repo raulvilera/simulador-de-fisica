@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { getLessonBySlug } from "../data/lessons.js";
 import { useAppStore } from "../store/useAppStore.js";
 import "./LessonLayout.css";
+import Annotations from "./Annotations.jsx";
 
 import Lesson1History from "../scenes/Lesson1History.jsx";
 import Lesson2ReferenceFrame from "../scenes/Lesson2ReferenceFrame.jsx";
@@ -111,6 +112,7 @@ function LessonView({ lesson, mode, SceneComponent }) {
         ) : (
           <div style={{ padding: 40, color: "white" }}>Cena em construção.</div>
         )}
+        <Annotations />
         <button
           type="button"
           className="sheetHandle"
