@@ -8,6 +8,7 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -85,6 +86,15 @@ export default function Lesson4Velocity() {
         <QuantityTag q={Q.dt} position={[9.5, 2.7, 0]} value={`= ${fmt(time)} h`} name="do início ao fim da viagem" />
         <QuantityTag q={Q.vm} position={[6.5, 3.6, 0]} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
       </SceneShell>
+      <LiveHud
+        phase={trip.p <= 0 ? "parado" : trip.p >= 1 ? "chegou" : "viajando"}
+        items={[
+          { symbol: "Δt", value: `${num(dtNow)} h`, color: Q.dt.color },
+          { symbol: "ΔS", value: `${num(dsNow, 1)} km`, color: Q.ds.color },
+          { symbol: "v", value: `${num(instSpeed, 1)} km/h`, color: Q.vi.color, note: "velocímetro" },
+          { symbol: "v média", value: `${num(dtNow > 0 ? dsNow / dtNow : 0, 1)} km/h`, color: Q.vm.color, note: "até agora" },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 4 · Velocidade</p>

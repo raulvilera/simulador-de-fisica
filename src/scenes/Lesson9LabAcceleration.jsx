@@ -7,6 +7,7 @@ import { useThrottled } from "./useThrottled.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -82,6 +83,16 @@ export default function Lesson9LabAcceleration() {
           </>
         )}
       </SceneShell>
+      <LiveHud
+        phase={running && run ? `medição ${run.boost}` : deltaV != null ? "medições prontas" : "parado"}
+        items={[
+          { symbol: "t", value: `${num(run?.t ?? 0)} s`, color: Q.dt.color },
+          { symbol: "d", value: `${num(run?.d ?? 0, 1)} cm`, color: "#fb923c" },
+          { symbol: "V", value: `${num(run && run.t > 0 ? run.d / run.t : 0, 1)} cm/s`, color: run?.boost === 2 ? Q.v2.color : Q.v1.color },
+          { symbol: "ΔV", value: deltaV != null ? `${num(deltaV)} cm/s` : "—", color: Q.dv.color },
+          { symbol: "a", value: accel != null ? `${num(accel)} cm/s²` : "—", color: Q.a.color },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 9 · Desafio experimental</p>

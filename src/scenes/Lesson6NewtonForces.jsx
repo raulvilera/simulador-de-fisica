@@ -8,6 +8,7 @@ import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -34,6 +35,10 @@ export default function Lesson6NewtonForces() {
   const [meas, setMeas] = useState({ v: 0, t: 0, x: 0, done: false }); // medido na cena
   const fRes = opposite ? f1 - f2 : f1 + f2;
   const accel = mass > 0 ? fRes / mass : 0;
+  // grandezas do instante atual (mudam quando as pessoas soltam o caixote)
+  const fResNow = meas.done ? 0 : fRes;
+  const aNow = meas.done ? 0 : accel;
+  const phase = meas.t <= 0 ? "parado" : !meas.done ? "empurrando" : meas.ended ? "fim (deslizou por inércia)" : "inércia";
 
   return (
     <div className="lesson__canvas">
@@ -68,6 +73,16 @@ export default function Lesson6NewtonForces() {
           )}
         </FollowX>
       </SceneShell>
+      <LiveHud
+        phase={phase}
+        items={[
+          { symbol: "t", value: `${num(meas.t + (meas.coast ?? 0), 1)} s`, color: "#a78bfa" },
+          { symbol: "FRes", value: `${num(fResNow)} N`, color: Q.fres.color },
+          { symbol: "a", value: `${num(aNow)} m/s²`, color: Q.a.color },
+          { symbol: "v", value: `${num(meas.v)} m/s`, color: "#38bdf8" },
+          { symbol: "x", value: `${num(meas.x, 1)} m`, color: "#e5e9f5", note: "andou" },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 6 · 2ª e 3ª Leis de Newton</p>
@@ -94,10 +109,13 @@ export default function Lesson6NewtonForces() {
               ↺
             </button>
           </div>
+          {/* valores do instante atual: depois que soltam o caixote, FRes e a viram 0 */}
           <Readout
             items={[
-              { label: "FRes = F1 ± F2", value: `${fRes.toFixed(0)} N` },
-              { label: "a = FRes / m", value: `${accel.toFixed(2)} m/s²` },
+              { label: meas.done ? "FRes agora (soltaram)" : "FRes = F1 ± F2", value: `${num(fResNow)} N` },
+              { label: meas.done ? "a agora (inércia)" : "a = FRes / m", value: `${num(aNow)} m/s²` },
+              { label: "Velocidade agora", value: `${num(meas.v)} m/s` },
+              { label: "Tempo", value: `${num(meas.t + (meas.coast ?? 0), 1)} s` },
             ]}
           />
         </div>
@@ -304,7 +322,7 @@ const PushedBox = memo(function PushedBox({
     if (!s.done && people.current) people.current.position.x = vx; // param onde soltaram o caixote
     const force = (s.done && !s.sent) || s.ended;
     if (s.done) s.sent = true;
-    report({ v: s.v, t: s.t, x: s.x, done: s.done }, force);
+    report({ v: s.v, t: s.t, coast: s.coast, x: s.x, done: s.done, ended: s.ended }, force);
   });
 
   const side2 = opposite ? 1 : -1; // lado do caixote onde fica quem aplica F2
@@ -377,14 +395,14 @@ const PushedBox = memo(function PushedBox({
         )}
         <QuantityTag
           q={Q.fres}
-          position={[Math.sign(fRes || 1) * (arrowLen(fRes) + 0.75), 2.3, 0]}
+          position={pushing ? [Math.sign(fRes || 1) * (arrowLen(fRes) + 0.75), 2.3, 0] : [0, 1.75, 0]}
           value={pushing ? `= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N` : "= 0 N"}
           name={pushing ? "força resultante" : "ninguém empurra: o caixote segue por inércia (1ª Lei)"}
         />
         <QuantityTag q={Q.m} position={[0, HALF * 2 + 0.25, 0]} value={`= ${mass} kg`} />
         <QuantityTag
           q={Q.a}
-          position={[0, 3.05, 0]}
+          position={pushing ? [0, 3.05, 0] : [0, 2.2, 0]}
           value={pushing ? `= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²` : "= 0 (velocidade constante)"}
         />
       </group>

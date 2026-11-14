@@ -8,6 +8,7 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -48,6 +49,11 @@ export default function Lesson7NewtonForces2() {
     setResetKey((k) => k + 1);
   };
   const vKmh = live.v * 3.6;
+
+  // grandezas do instante atual: se freou até parar, a resultante e a aceleração zeram
+  const stoppedNow = live.t > 0 && live.v <= 1e-6 && fRes < 0;
+  const fResNow = stoppedNow ? 0 : fRes;
+  const aNow = stoppedNow ? 0 : accel;
 
   return (
     <div className="lesson__canvas">
@@ -91,9 +97,9 @@ export default function Lesson7NewtonForces2() {
           <QuantityTag
             q={Q.fres}
             position={[-0.2 + Math.sign(fRes || 1) * (aLen(fRes) + 1.1), 1.75, 0]}
-            value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`}
+            value={stoppedNow ? "= 0 N (parado: o atrito equilibra)" : `= ${num(force)} − ${num(friction)} = ${num(fRes)} N`}
           />
-          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
+          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={stoppedNow ? "= 0 (parado)" : `= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
           <QuantityTag
             q={Q.v}
             position={[0, 0, 2.7]}
@@ -104,6 +110,16 @@ export default function Lesson7NewtonForces2() {
           />
         </RaceCar>
       </SceneShell>
+      <LiveHud
+        phase={live.t <= 0 ? "parado" : stoppedNow ? "parou (freou)" : live.t >= RUN ? "fim" : fRes < 0 ? "freando" : "acelerando"}
+        items={[
+          { symbol: "t", value: `${num(live.t, 1)} s`, color: "#a78bfa" },
+          { symbol: "FRes", value: `${num(fResNow)} N`, color: Q.fres.color },
+          { symbol: "a", value: `${num(aNow)} m/s²`, color: Q.a.color },
+          { symbol: "v", value: `${num(live.v, 1)} m/s`, color: Q.v.color, note: `${num(live.v * 3.6, 0)} km/h` },
+          { symbol: "x", value: `${num(live.x, 1)} m`, color: "#e5e9f5", note: "andou" },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 7 · Aceleração e força</p>
@@ -136,8 +152,8 @@ export default function Lesson7NewtonForces2() {
           </div>
           <Readout
             items={[
-              { label: "FRes = F − atrito", value: `${fRes} N` },
-              { label: "a = FRes / m", value: `${accel.toFixed(2)} m/s²` },
+              { label: "FRes agora", value: `${num(fResNow)} N` },
+              { label: "a agora", value: `${num(aNow)} m/s²` },
               { label: "Velocidade (m/s)", value: `${live.v.toFixed(1)} m/s` },
               { label: "Velocidade (km/h)", value: `${vKmh.toFixed(0)} km/h` },
             ]}
