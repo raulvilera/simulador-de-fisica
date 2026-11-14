@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack, Arrow3D } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
@@ -21,6 +22,7 @@ const ARROW_SCALE = 1 / 1600; // 1 unidade de seta a cada 1600 N
 const aLen = (f) => Math.min(Math.max(Math.abs(f) * ARROW_SCALE, 0.45), 6);
 
 export default function Lesson7NewtonForces2() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [mass, setMass] = useState(800); // kg
   const [force, setForce] = useState(4000); // N
   const [friction, setFriction] = useState(500); // N
@@ -50,13 +52,11 @@ export default function Lesson7NewtonForces2() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[2, 4.6, 18.5]} controlsTarget={[5.6, 1.4, 0]}>
-        <RulerTrack
-          length={16}
-          start={0}
-          step={niceStep(L / 10) * kTrack}
-          labelOf={(x) => fmtNum(x / kTrack, 1)}
-        />
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
+        <RulerTrack length={16} start={0} step={niceStep(L / 10) * kTrack} labelOf={(x) => fmtNum(x / kTrack, 1)} />
         <RaceCar
+          objRef={followRef}
           key={`${resetKey}-${v0}-${accel}-${L}`}
           playing={playing}
           accel={accel}
@@ -79,16 +79,28 @@ export default function Lesson7NewtonForces2() {
           )}
           {fRes !== 0 && (
             <Concept id="fres">
-              <Arrow3D from={[-0.2, 1.75, 0]} dir={Math.sign(fRes)} length={aLen(fRes)} thickness={1.4} color={Q.fres.color} />
+              <Arrow3D
+                from={[-0.2, 1.75, 0]}
+                dir={Math.sign(fRes)}
+                length={aLen(fRes)}
+                thickness={1.4}
+                color={Q.fres.color}
+              />
             </Concept>
           )}
-          <QuantityTag q={Q.fres} position={[-0.2 + Math.sign(fRes || 1) * (aLen(fRes) + 1.1), 1.75, 0]} value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`} />
+          <QuantityTag
+            q={Q.fres}
+            position={[-0.2 + Math.sign(fRes || 1) * (aLen(fRes) + 1.1), 1.75, 0]}
+            value={`= ${num(force)} − ${num(friction)} = ${num(fRes)} N`}
+          />
           <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
           <QuantityTag
             q={Q.v}
             position={[0, 0, 2.7]}
             value={`= ${num(live.v, 1)} m/s (${num(live.v * 3.6, 0)} km/h)`}
-            name={live.t > 0 ? `t = ${num(live.t, 1)} s · andou ${num(live.x, 1)} m` : "velocidade (muda com a aceleração)"}
+            name={
+              live.t > 0 ? `t = ${num(live.t, 1)} s · andou ${num(live.x, 1)} m` : "velocidade (muda com a aceleração)"
+            }
           />
         </RaceCar>
       </SceneShell>
@@ -99,7 +111,15 @@ export default function Lesson7NewtonForces2() {
         <div className="controls">
           <Slider label="Massa do carro" value={mass} onChange={setMass} min={400} max={1600} step={50} unit=" kg" />
           <Slider label="Força do motor" value={force} onChange={setForce} min={1000} max={8000} step={250} unit=" N" />
-          <Slider label="Atrito + resistência" value={friction} onChange={setFriction} min={0} max={3000} step={100} unit=" N" />
+          <Slider
+            label="Atrito + resistência"
+            value={friction}
+            onChange={setFriction}
+            min={0}
+            max={3000}
+            step={100}
+            unit=" N"
+          />
           <div className="btnRow">
             <button className="btn btn--primary" onClick={() => setPlaying(true)}>
               ▶ Acelerar
@@ -138,14 +158,34 @@ export default function Lesson7NewtonForces2() {
             { symbol: "a", name: "aceleração", unit: "m/s²", color: Q.a.color },
           ]}
           inputs={[
-            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 0.001, max: 1e12, color: "#e5e9f5" },
+            {
+              key: "m",
+              symbol: "m",
+              unit: "kg",
+              value: mass,
+              onChange: setMass,
+              min: 0.001,
+              max: 1e12,
+              color: "#e5e9f5",
+            },
             { key: "f", symbol: "F", unit: "N", value: force, onChange: setForce, min: 0, max: 1e12, color: Q.f.color },
-            { key: "fat", symbol: "Fat", unit: "N", value: friction, onChange: setFriction, min: 0, max: 1e12, color: Q.fat.color },
+            {
+              key: "fat",
+              symbol: "Fat",
+              unit: "N",
+              value: friction,
+              onChange: setFriction,
+              min: 0,
+              max: 1e12,
+              color: Q.fat.color,
+            },
           ]}
           steps={
             <>
               FRes = {num(force)} − {nump(friction)} = <b>{num(force - friction)} N</b>
-              {!moving && <span style={{ color: "#fca5a5" }}> (parado, o atrito equilibra: o carro não sai do lugar)</span>}
+              {!moving && (
+                <span style={{ color: "#fca5a5" }}> (parado, o atrito equilibra: o carro não sai do lugar)</span>
+              )}
               {moving && fRes < 0 && <span style={{ color: "#fca5a5" }}> (resultante para trás: o carro freia)</span>}
               <br />a = {num(fRes)} ÷ {nump(mass)} = <b>{num(accel)} m/s²</b>
             </>
@@ -156,7 +196,8 @@ export default function Lesson7NewtonForces2() {
                 t = <b>{num(live.t)} s</b>
                 <br />v = v₀ + a · t = {num(v0)} + {nump(accel)} × {nump(live.t)} = <b>{num(live.v, 1)} m/s</b> (
                 {num(live.v * 3.6, 0)} km/h)
-                <br />distância = <b>{num(live.x, 1)} m</b>
+                <br />
+                distância = <b>{num(live.x, 1)} m</b>
               </>
             ) : (
               <>Aperte ▶ Acelerar: t, v e a distância mudam enquanto o carro anda.</>
@@ -178,7 +219,19 @@ export default function Lesson7NewtonForces2() {
             { symbol: "m/s", name: "metros por segundo (SI, usado na conta da aceleração)", color: "#4ade80" },
           ]}
           inputs={[
-            { key: "kmh", symbol: "v₀", unit: "km/h", value: kmh, onChange: (v) => { setKmh(v); restart(); }, min: 0, max: 1e9, color: "#38bdf8" },
+            {
+              key: "kmh",
+              symbol: "v₀",
+              unit: "km/h",
+              value: kmh,
+              onChange: (v) => {
+                setKmh(v);
+                restart();
+              },
+              min: 0,
+              max: 1e9,
+              color: "#38bdf8",
+            },
           ]}
           steps={
             <>
@@ -197,8 +250,8 @@ export default function Lesson7NewtonForces2() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          Para converter: km/h ÷ 3,6 = m/s. Aqui, quanto maior a força do motor e menor a massa ou o
-          atrito, maior a aceleração resultante — exatamente como nos exercícios de corrida da aula.
+          Para converter: km/h ÷ 3,6 = m/s. Aqui, quanto maior a força do motor e menor a massa ou o atrito, maior a
+          aceleração resultante — exatamente como nos exercícios de corrida da aula.
         </p>
       </div>
     </div>
@@ -207,7 +260,7 @@ export default function Lesson7NewtonForces2() {
 
 // Movimento real durante `runTime` s; na tela a pista (15 unidades) representa
 // a distância percorrida nesse tempo (kTrack = unidades da cena por metro).
-function RaceCar({ playing, accel, v0, kTrack, runTime, onUpdate, children }) {
+function RaceCar({ objRef, playing, accel, v0, kTrack, runTime, onUpdate, children }) {
   const ref = useRef();
   const state = useRef({ x: 0, v: v0, t: 0 });
   const report = useThrottled(onUpdate);
@@ -226,7 +279,13 @@ function RaceCar({ playing, accel, v0, kTrack, runTime, onUpdate, children }) {
   });
 
   return (
-    <group ref={ref} position={[0, 0.3, 0]}>
+    <group
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[0, 0.3, 0]}
+    >
       <Vehicle color="#ef4444" />
       {children}
     </group>

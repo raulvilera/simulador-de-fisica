@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
@@ -21,6 +22,7 @@ const TRACK_LENGTH_CM = 24; // comprimento fixo da "pista", como no roteiro da a
 const SCENE_LENGTH = 8; // unidades de cena equivalentes aos 24 cm
 
 export default function Lesson8LabVelocity() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [running, setRunning] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -37,11 +39,7 @@ export default function Lesson8LabVelocity() {
     setRunning(false);
     setElapsed(time);
     setProg(1);
-    setTrials((prev) =>
-      prev.length >= 5
-        ? prev
-        : [...prev, { ds: dsCalc, dt: time, v: dsCalc / time }]
-    );
+    setTrials((prev) => (prev.length >= 5 ? prev : [...prev, { ds: dsCalc, dt: time, v: dsCalc / time }]));
   };
 
   // calculadora: começa com a pista de 24 cm; Δt recebe cada nova medição
@@ -53,12 +51,13 @@ export default function Lesson8LabVelocity() {
     if (lastDt != null) setDtCalc(Math.round(lastDt * 100) / 100);
   }, [lastDt]);
 
-  const avgV =
-    trials.length > 0 ? trials.reduce((a, t) => a + t.v, 0) / trials.length : 0;
+  const avgV = trials.length > 0 ? trials.reduce((a, t) => a + t.v, 0) / trials.length : 0;
 
   return (
     <div className="lesson__canvas">
       <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.6, 0.8, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         {/* a pista (8 unidades) representa o ΔS digitado: as marcas mostram cm */}
         <RulerTrack
           length={SCENE_LENGTH}
@@ -68,6 +67,7 @@ export default function Lesson8LabVelocity() {
           highlight={[0, SCENE_LENGTH]}
         />
         <FrictionCart
+          objRef={followRef}
           running={running}
           resetKey={resetKey}
           onFinish={onFinish}
@@ -88,7 +88,12 @@ export default function Lesson8LabVelocity() {
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => SCENE_LENGTH} y={1.9} z={-0.6} color={Q.ds.color} />
         </Concept>
-        <QuantityTag q={Q.ds} position={[SCENE_LENGTH / 2, 2.3, -0.6]} value={`= ${num(dsCalc)} cm`} name="da largada até a chegada" />
+        <QuantityTag
+          q={Q.ds}
+          position={[SCENE_LENGTH / 2, 2.3, -0.6]}
+          value={`= ${num(dsCalc)} cm`}
+          name="da largada até a chegada"
+        />
         {trials.length > 0 && (
           <QuantityTag
             q={Q.v}
@@ -162,8 +167,29 @@ export default function Lesson8LabVelocity() {
             { symbol: "Δt", name: "intervalo de tempo medido no cronômetro", unit: "s", color: Q.dt.color },
           ]}
           inputs={[
-            { key: "ds", symbol: "ΔS", unit: "cm", value: dsCalc, onChange: setDsCalc, min: 0.001, max: 1e12, color: Q.ds.color },
-            { key: "dt", symbol: "Δt", unit: "s", value: dtCalc, onChange: (v) => { setDtCalc(v); setDtTyped(v); }, min: 0.001, max: 1e12, color: Q.dt.color },
+            {
+              key: "ds",
+              symbol: "ΔS",
+              unit: "cm",
+              value: dsCalc,
+              onChange: setDsCalc,
+              min: 0.001,
+              max: 1e12,
+              color: Q.ds.color,
+            },
+            {
+              key: "dt",
+              symbol: "Δt",
+              unit: "s",
+              value: dtCalc,
+              onChange: (v) => {
+                setDtCalc(v);
+                setDtTyped(v);
+              },
+              min: 0.001,
+              max: 1e12,
+              color: Q.dt.color,
+            },
           ]}
           steps={
             <>
@@ -191,9 +217,8 @@ export default function Lesson8LabVelocity() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 10 }}>
-          Repita a medição até 5 vezes (cada tentativa tem uma leve variação, como no experimento
-          real). V = ΔS/Δt — os dados preenchem a mesma tabela usada na aula 9 para calcular a
-          aceleração.
+          Repita a medição até 5 vezes (cada tentativa tem uma leve variação, como no experimento real). V = ΔS/Δt — os
+          dados preenchem a mesma tabela usada na aula 9 para calcular a aceleração.
         </p>
       </div>
     </div>
@@ -206,7 +231,7 @@ const randomSpeed = () => 6 + Math.random() * 1.8;
 // O carrinho percorre a pista (ΔS) em T segundos reais: T = Δt digitado, ou
 // ΔS ÷ velocidade sorteada. Tempos muito longos/curtos são acelerados/
 // desacelerados na tela, mas o cronômetro mostra sempre o tempo real.
-function FrictionCart({ running, resetKey, onFinish, onTick, ds, dtTarget, children }) {
+function FrictionCart({ objRef, running, resetKey, onFinish, onTick, ds, dtTarget, children }) {
   const ref = useRef();
   const t = useRef(0);
   const T = useRef(null);
@@ -236,7 +261,14 @@ function FrictionCart({ running, resetKey, onFinish, onTick, ds, dtTarget, child
   });
 
   return (
-    <group key={resetKey} ref={ref} position={[0, 0.25, 0]}>
+    <group
+      key={resetKey}
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[0, 0.25, 0]}
+    >
       <group scale={0.7}>
         <Vehicle color="#22c55e" />
       </group>

@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout } from "../components/ui.jsx";
@@ -31,13 +32,24 @@ const CAR_Y = 0.3; // altura do "centro" do carro para a linha de visada
 const sgn = (v) => (v >= 0 ? "+" : "−") + f1(Math.abs(v));
 const Q_LIST = Object.values(Q);
 
-function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick }) {
+// A pista vai de −30 a +30 m. Quando um carro chega ao fim dela, o movimento
+// termina (nada de "teletransporte" de uma ponta à outra).
+const ROAD_END = 28;
+
+function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const followed = useRef(0);
+  const obsRef = useRef();
+  // reinício: carros de volta à largada (a câmera do referencial do João se
+  // reajusta sozinha no quadro seguinte)
+  useEffect(() => {
+    x.current = { joao: 0, outro: -4 };
+    clock.current = 0;
+  }, [resetKey]);
   const clock = useRef(0); // tempo de movimento (s)
   const tick = useThrottled(onTick, 100);
   const [angJ, setAngJ] = useState(null);
@@ -52,11 +64,13 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick }) {
       tick({ t: clock.current });
       x.current.joao += V_JOAO * delta;
       x.current.outro += V_OUTRO * delta;
-      // a pista "dá a volta": quem sai por um lado entra pelo outro (vale para
-      // qualquer velocidade, inclusive negativa = andando de ré)
-      const wrap = (v) => ((((v + 16) % 32) + 32) % 32) - 16;
-      x.current.joao = wrap(x.current.joao);
-      x.current.outro = wrap(x.current.outro);
+      // fim da pista: os carros param ali e a ação termina
+      const clamp = (v) => Math.max(-ROAD_END, Math.min(ROAD_END, v));
+      if (Math.abs(x.current.joao) >= ROAD_END || Math.abs(x.current.outro) >= ROAD_END) {
+        x.current.joao = clamp(x.current.joao);
+        x.current.outro = clamp(x.current.outro);
+        onEnd?.();
+      }
     }
 
     if (joaoRef.current) joaoRef.current.position.x = x.current.joao;
@@ -106,7 +120,11 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick }) {
         />
       </group>
       {/* observador: uma pessoa parada na beira da pista */}
-      <StandingPerson position={OBS} rotationY={Math.PI} />
+      <group ref={obsRef}>
+        <StandingPerson position={OBS} rotationY={Math.PI} />
+      </group>
+      {/* no referencial da rua, a câmera acompanha os dois carros (e o observador) */}
+      <KeepInView targets={[joaoRef, outroRef, obsRef]} enabled={frame === "solo"} margin={0.78} axes={[1, 0, 0]} />
       <QuantityTag
         q={Q.ref}
         position={[OBS[0], PERSON_H + 0.75, OBS[2]]}
@@ -167,6 +185,7 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick }) {
 
 export default function Lesson2ReferenceFrame() {
   const [playing, setPlaying] = useState(false);
+  const [roadKey, setRoadKey] = useState(0); // reinício: carros voltam à largada
   const [frame, setFrame] = useState("solo");
 
   const [V_JOAO, setVJ] = useState(EX_JOAO);
@@ -176,8 +195,16 @@ export default function Lesson2ReferenceFrame() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]}>
-        <Road playing={playing} frame={frame} vJ={V_JOAO} vO={V_OUTRO} onTick={setClock} />
+      <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]} maxDistance={45}>
+        <Road
+          resetKey={roadKey}
+          playing={playing}
+          frame={frame}
+          vJ={V_JOAO}
+          vO={V_OUTRO}
+          onTick={setClock}
+          onEnd={() => setPlaying(false)}
+        />
       </SceneShell>
 
       <div className="panel">
@@ -205,6 +232,16 @@ export default function Lesson2ReferenceFrame() {
             <button className="btn btn--primary" onClick={() => setPlaying((p) => !p)}>
               {playing ? "⏸ Pausar" : "▶ Iniciar"}
             </button>
+            <button
+              className="btn btn--ghost"
+              onClick={() => {
+                setPlaying(false);
+                setClock({ t: 0 });
+                setRoadKey((k) => k + 1);
+              }}
+            >
+              ↺ Reiniciar
+            </button>
           </div>
           <Readout
             items={[
@@ -222,17 +259,47 @@ export default function Lesson2ReferenceFrame() {
           title="Velocidade relativa"
           formula={
             <>
-              v<sub>rel</sub> = <Term q={Q.vo}>v<sub>outro</sub></Term> − <Term q={Q.vj}>v<sub>João</sub></Term>
+              v<sub>rel</sub> ={" "}
+              <Term q={Q.vo}>
+                v<sub>outro</sub>
+              </Term>{" "}
+              −{" "}
+              <Term q={Q.vj}>
+                v<sub>João</sub>
+              </Term>
             </>
           }
           terms={[
-            { symbol: "vrel", name: "velocidade do outro carro vista por João (referencial no carro de João)", unit: "m/s", color: Q.ref.color },
+            {
+              symbol: "vrel",
+              name: "velocidade do outro carro vista por João (referencial no carro de João)",
+              unit: "m/s",
+              color: Q.ref.color,
+            },
             { symbol: "voutro", name: "velocidade do outro carro em relação à rua", unit: "m/s", color: Q.vo.color },
             { symbol: "vJoão", name: "velocidade de João em relação à rua", unit: "m/s", color: Q.vj.color },
           ]}
           inputs={[
-            { key: "vj", symbol: "vJoão", unit: "m/s", value: V_JOAO, onChange: setVJ, min: -1e12, max: 1e12, color: Q.vj.color },
-            { key: "vo", symbol: "voutro", unit: "m/s", value: V_OUTRO, onChange: setVO, min: -1e12, max: 1e12, color: Q.vo.color },
+            {
+              key: "vj",
+              symbol: "vJoão",
+              unit: "m/s",
+              value: V_JOAO,
+              onChange: setVJ,
+              min: -1e12,
+              max: 1e12,
+              color: Q.vj.color,
+            },
+            {
+              key: "vo",
+              symbol: "voutro",
+              unit: "m/s",
+              value: V_OUTRO,
+              onChange: setVO,
+              min: -1e12,
+              max: 1e12,
+              color: Q.vo.color,
+            },
           ]}
           steps={
             <>
@@ -249,9 +316,11 @@ export default function Lesson2ReferenceFrame() {
             clock.t > 0 ? (
               <>
                 t = <b>{num(clock.t)} s</b> de movimento
-                <br />João andou ΔS = v · t = {num(V_JOAO)} × {nump(clock.t)} = <b>{num(V_JOAO * clock.t, 1)} m</b>
+                <br />
+                João andou ΔS = v · t = {num(V_JOAO)} × {nump(clock.t)} = <b>{num(V_JOAO * clock.t, 1)} m</b>
                 <br />o outro andou {num(V_OUTRO)} × {nump(clock.t)} = <b>{num(V_OUTRO * clock.t, 1)} m</b>
-                <br />para João, o outro se afastou v<sub>rel</sub> · t = {num(V_OUTRO - V_JOAO)} × {nump(clock.t)} ={" "}
+                <br />
+                para João, o outro se afastou v<sub>rel</sub> · t = {num(V_OUTRO - V_JOAO)} × {nump(clock.t)} ={" "}
                 <b>{num((V_OUTRO - V_JOAO) * clock.t, 1)} m</b>
               </>
             ) : (
@@ -292,9 +361,8 @@ export default function Lesson2ReferenceFrame() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          Mude o referencial para "Carro do João": repare que o carro dele passa a ficar parado no
-          centro da cena, e a velocidade do outro carro muda — porque a descrição do movimento
-          depende do referencial escolhido.
+          Mude o referencial para "Carro do João": repare que o carro dele passa a ficar parado no centro da cena, e a
+          velocidade do outro carro muda — porque a descrição do movimento depende do referencial escolhido.
         </p>
       </div>
     </div>

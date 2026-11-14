@@ -2,13 +2,19 @@ import { useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { Panel, Note, Check, Tag, Sun, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles } from "./quantities.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
-  radiacao: { id: "radiacao", symbol: "Radiação", name: "energia da estrela; diminui com a distância", color: "#fde047" },
+  radiacao: {
+    id: "radiacao",
+    symbol: "Radiação",
+    name: "energia da estrela; diminui com a distância",
+    color: "#fde047",
+  },
   dist: { id: "dist", symbol: "Distância", name: "1 UA = distância Terra–Sol", color: "#e5e9f5" },
   temp: { id: "temp", symbol: "T", name: "temperatura média do planeta", color: "#fb923c" },
   agua: { id: "agua", symbol: "Água", name: "estado físico", color: "#38bdf8" },
@@ -44,7 +50,7 @@ function nearestName(dist) {
   return hit ? hit[0] : `planeta hipotético (${dist.toFixed(2).replace(".", ",")} UA)`;
 }
 
-function OrbitingPlanet({ dist, color, greenhouse, children }) {
+function OrbitingPlanet({ objRef, dist, color, greenhouse, children }) {
   const ref = useRef();
   const angle = useRef(0.6);
   useFrame((_, delta) => {
@@ -52,7 +58,12 @@ function OrbitingPlanet({ dist, color, greenhouse, children }) {
     ref.current?.position.set(Math.cos(angle.current) * dist * UA, 0, Math.sin(angle.current) * dist * UA);
   });
   return (
-    <group ref={ref}>
+    <group
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+    >
       <mesh>
         <sphereGeometry args={[0.38, 40, 40]} />
         <meshStandardMaterial color={color} roughness={0.6} />
@@ -72,6 +83,7 @@ function OrbitingPlanet({ dist, color, greenhouse, children }) {
 }
 
 export default function Lesson19HabitableZone() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [dist, setDist] = useState(1);
   const [greenhouse, setGreenhouse] = useState(true);
   const [refs, setRefs] = useState(true);
@@ -83,6 +95,8 @@ export default function Lesson19HabitableZone() {
   return (
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 13, 14]} controlsTarget={[0, 0, 0]} maxDistance={40}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} margin={0.85} />
         <Sun radius={0.9} />
         {/* zona habitável: faixa entre as órbitas de Vênus e de Marte */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
@@ -97,15 +111,26 @@ export default function Lesson19HabitableZone() {
             <OrbitRing radius={VENUS * UA} color="#e0b672" />
             <OrbitRing radius={1 * UA} color="#3b82f6" />
             <OrbitRing radius={MARS * UA} color="#d1603d" />
-            <Tag position={[VENUS * UA, 0.3, 0]} color="#e0b672" size={0.22}>órbita de Vênus</Tag>
-            <Tag position={[UA, 0.3, 0.9]} color="#7dd3fc" size={0.22}>órbita da Terra</Tag>
-            <Tag position={[MARS * UA, 0.3, 0]} color="#f8a17f" size={0.22}>órbita de Marte</Tag>
+            <Tag position={[VENUS * UA, 0.3, 0]} color="#e0b672" size={0.22}>
+              órbita de Vênus
+            </Tag>
+            <Tag position={[UA, 0.3, 0.9]} color="#7dd3fc" size={0.22}>
+              órbita da Terra
+            </Tag>
+            <Tag position={[MARS * UA, 0.3, 0]} color="#f8a17f" size={0.22}>
+              órbita de Marte
+            </Tag>
           </>
         )}
         <OrbitRing radius={dist * UA} color="#ffffff" lineWidth={1.5} />
-        <OrbitingPlanet dist={dist} color={water.color} greenhouse={greenhouse}>
+        <OrbitingPlanet objRef={followRef} dist={dist} color={water.color} greenhouse={greenhouse}>
           <QuantityTag q={Q.temp} position={[0, 1.6, 0]} value={`≈ ${t.toFixed(0)} °C`} />
-          <QuantityTag q={Q.agua} position={[2.4, -0.3, 0]} value={water.label} name={inZone ? "dentro da zona habitável" : "fora da zona habitável"} />
+          <QuantityTag
+            q={Q.agua}
+            position={[2.4, -0.3, 0]}
+            value={water.label}
+            name={inZone ? "dentro da zona habitável" : "fora da zona habitável"}
+          />
           {greenhouse && <QuantityTag q={Q.estufa} position={[-2.4, -0.3, 0]} />}
         </OrbitingPlanet>
         <QuantityTag q={Q.radiacao} position={[0, -1.7, 0]} value={`${(100 / (dist * dist)).toFixed(0)} % da Terra`} />
@@ -128,17 +153,15 @@ export default function Lesson19HabitableZone() {
         </div>
         <QuantityToggles items={Q_LIST} />
         <Note>
-          A temperatura de um planeta depende da distância até sua estrela. Na{" "}
-          <b>zona habitável</b> (no Sistema Solar, entre Vênus e Marte) a radiação recebida permite
-          água líquida. Sem o efeito estufa natural, a Terra teria média de −18 °C; com ele, cerca de
-          15 °C. Condições para a vida como a conhecemos: gravidade, atmosfera, proteção contra
-          radiação, água líquida e temperatura adequada.
+          A temperatura de um planeta depende da distância até sua estrela. Na <b>zona habitável</b> (no Sistema Solar,
+          entre Vênus e Marte) a radiação recebida permite água líquida. Sem o efeito estufa natural, a Terra teria
+          média de −18 °C; com ele, cerca de 15 °C. Condições para a vida como a conhecemos: gravidade, atmosfera,
+          proteção contra radiação, água líquida e temperatura adequada.
         </Note>
         <Note>
-          A Astrobiologia procura essas condições e <b>assinaturas biológicas</b> (oxigênio, gás
-          carbônico, metano) em Marte, nas luas Europa e Encélado e em exoplanetas como os sete do
-          sistema TRAPPIST-1, a cerca de 40 anos-luz. Modelo simplificado; 1 UA = distância
-          Terra-Sol.
+          A Astrobiologia procura essas condições e <b>assinaturas biológicas</b> (oxigênio, gás carbônico, metano) em
+          Marte, nas luas Europa e Encélado e em exoplanetas como os sete do sistema TRAPPIST-1, a cerca de 40 anos-luz.
+          Modelo simplificado; 1 UA = distância Terra-Sol.
         </Note>
       </Panel>
     </div>

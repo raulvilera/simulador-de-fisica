@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
+import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { niceStep, fmtNum } from "./scale.js";
@@ -19,6 +20,7 @@ const Q_LIST = Object.values(Q);
 const f1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
 
 export default function Lesson5VelocityMulti() {
+  const followRef = useRef(); // objeto que a câmera acompanha
   const [d1, setD1] = useState(60); // km
   const [v1, setV1] = useState(20); // km/h
   const [d2, setD2] = useState(40); // km
@@ -40,6 +42,8 @@ export default function Lesson5VelocityMulti() {
   return (
     <div className="lesson__canvas">
       <SceneShell cameraPosition={[4.6, 4.8, 18]} controlsTarget={[6, 1.8, 0]}>
+        {/* a câmera acompanha o movimento até o fim, sem perder o objeto de vista */}
+        <KeepInView targets={[followRef]} axes={[1, 0, 1]} />
         {/* a pista inteira (0 → 14) representa d₁ + d₂: as marcas mostram km */}
         <RulerTrack
           length={14}
@@ -49,6 +53,7 @@ export default function Lesson5VelocityMulti() {
           highlight={[0, (14 * d1) / (d1 + d2), 14]}
         />
         <AnimatedCar
+          objRef={followRef}
           key={resetKey}
           playing={playing}
           resetKey={resetKey}
@@ -139,16 +144,57 @@ export default function Lesson5VelocityMulti() {
           }
           terms={[
             { symbol: "v", name: "velocidade média do percurso inteiro", unit: "km/h", color: Q.vm.color },
-            { symbol: "ΔS", name: "ΔS total = d₁ + d₂ (soma das distâncias dos trechos)", unit: "km", color: "#fb923c" },
+            {
+              symbol: "ΔS",
+              name: "ΔS total = d₁ + d₂ (soma das distâncias dos trechos)",
+              unit: "km",
+              color: "#fb923c",
+            },
             { symbol: "Δt", name: "Δt total = t₁ + t₂, com t = d ÷ v em cada trecho", unit: "h", color: "#a78bfa" },
             { symbol: "d₁, v₁", name: "distância e velocidade do trecho 1", color: Q.t1.color },
             { symbol: "d₂, v₂", name: "distância e velocidade do trecho 2", color: Q.t2.color },
           ]}
           inputs={[
-            { key: "d1", symbol: "d₁", unit: "km", value: d1, onChange: setD1, min: 0.001, max: 1e12, color: Q.t1.color },
-            { key: "v1", symbol: "v₁", unit: "km/h", value: v1, onChange: setV1, min: 0.001, max: 1e12, color: Q.t1.color },
-            { key: "d2", symbol: "d₂", unit: "km", value: d2, onChange: setD2, min: 0.001, max: 1e12, color: Q.t2.color },
-            { key: "v2", symbol: "v₂", unit: "km/h", value: v2, onChange: setV2, min: 0.001, max: 1e12, color: Q.t2.color },
+            {
+              key: "d1",
+              symbol: "d₁",
+              unit: "km",
+              value: d1,
+              onChange: setD1,
+              min: 0.001,
+              max: 1e12,
+              color: Q.t1.color,
+            },
+            {
+              key: "v1",
+              symbol: "v₁",
+              unit: "km/h",
+              value: v1,
+              onChange: setV1,
+              min: 0.001,
+              max: 1e12,
+              color: Q.t1.color,
+            },
+            {
+              key: "d2",
+              symbol: "d₂",
+              unit: "km",
+              value: d2,
+              onChange: setD2,
+              min: 0.001,
+              max: 1e12,
+              color: Q.t2.color,
+            },
+            {
+              key: "v2",
+              symbol: "v₂",
+              unit: "km/h",
+              value: v2,
+              onChange: setV2,
+              min: 0.001,
+              max: 1e12,
+              color: Q.t2.color,
+            },
           ]}
           steps={
             <>
@@ -163,8 +209,8 @@ export default function Lesson5VelocityMulti() {
           live={
             now.tH > 0 ? (
               <>
-                {inLeg1 ? "Trecho 1" : now.tH >= t1 + t2 ? "Fim do percurso" : "Trecho 2"}: t = <b>{num(now.tH)} h</b> · ΔS ={" "}
-                <b>{num(dNow, 1)} km</b>
+                {inLeg1 ? "Trecho 1" : now.tH >= t1 + t2 ? "Fim do percurso" : "Trecho 2"}: t = <b>{num(now.tH)} h</b> ·
+                ΔS = <b>{num(dNow, 1)} km</b>
                 <br />v média até agora = {num(dNow, 1)} ÷ {nump(now.tH)} = <b>{num(dNow / now.tH, 1)} km/h</b>
               </>
             ) : (
@@ -181,16 +227,16 @@ export default function Lesson5VelocityMulti() {
 
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
-          A velocidade média do percurso completo é ΔS<sub>total</sub>/Δt<sub>total</sub>, e{" "}
-          <strong>não</strong> a média aritmética das velocidades de cada trecho — os dois valores só
-          coincidem se os tempos dos trechos forem iguais.
+          A velocidade média do percurso completo é ΔS<sub>total</sub>/Δt<sub>total</sub>, e <strong>não</strong> a
+          média aritmética das velocidades de cada trecho — os dois valores só coincidem se os tempos dos trechos forem
+          iguais.
         </p>
       </div>
     </div>
   );
 }
 
-function AnimatedCar({ playing, resetKey, t1, t2, splitX, onTick, children }) {
+function AnimatedCar({ objRef, playing, resetKey, t1, t2, splitX, onTick, children }) {
   const ref = useRef();
   const clock = useRef(0);
   const tick = useThrottled(onTick, 100);
@@ -219,7 +265,14 @@ function AnimatedCar({ playing, resetKey, t1, t2, splitX, onTick, children }) {
   });
 
   return (
-    <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
+    <group
+      key={resetKey}
+      ref={(o) => {
+        ref.current = o;
+        if (objRef) objRef.current = o;
+      }}
+      position={[0, 0.3, 0]}
+    >
       <Vehicle color="#22c55e" />
       {children}
     </group>
