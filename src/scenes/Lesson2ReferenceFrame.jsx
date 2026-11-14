@@ -8,6 +8,7 @@ import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
 const EX_JOAO = 3;
@@ -193,6 +194,11 @@ export default function Lesson2ReferenceFrame() {
   const [clock, setClock] = useState({ t: 0 }); // tempo desde que os carros começaram a andar
   const relativeSpeed = frame === "solo" ? f1(V_OUTRO) : f1(V_OUTRO - V_JOAO);
 
+  // posições do instante atual (em relação ao observador, x = 0); param no fim da pista
+  const lim = (v) => Math.max(-28, Math.min(28, v));
+  const xJnow = lim(V_JOAO * clock.t);
+  const xOnow = lim(-4 + V_OUTRO * clock.t);
+
   return (
     <div className="lesson__canvas">
       <SceneShell fov={46} cameraPosition={[-1.5, 2.7, 10.5]} controlsTarget={[0, 0.3, 0]} maxDistance={45}>
@@ -206,6 +212,16 @@ export default function Lesson2ReferenceFrame() {
           onEnd={() => setPlaying(false)}
         />
       </SceneShell>
+      <LiveHud
+        phase={clock.t <= 0 ? "parado" : playing ? "em movimento" : "fim / pausado"}
+        items={[
+          { symbol: "t", value: `${num(clock.t, 1)} s`, color: "#a78bfa" },
+          { symbol: "x João", value: `${num(xJnow, 1)} m`, color: Q.vj.color },
+          { symbol: "x outro", value: `${num(xOnow, 1)} m`, color: Q.vo.color },
+          { symbol: "distância", value: `${num(Math.abs(xOnow - xJnow), 1)} m`, color: "#e5e9f5", note: "entre eles" },
+          { symbol: "v rel", value: `${num(V_OUTRO - V_JOAO)} m/s`, color: Q.ref.color },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 2 · Referencial</p>

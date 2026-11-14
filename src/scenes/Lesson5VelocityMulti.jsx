@@ -8,6 +8,7 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -102,6 +103,15 @@ export default function Lesson5VelocityMulti() {
         />
         <QuantityTag q={Q.err} position={[7, 4.65, 0]} value={`= ${f1(vMediaErrada)} km/h ✗`} />
       </SceneShell>
+      <LiveHud
+        phase={now.tH <= 0 ? "parado" : now.tH >= t1 + t2 ? "chegou" : inLeg1 ? "trecho 1" : "trecho 2"}
+        items={[
+          { symbol: "t", value: `${num(now.tH)} h`, color: "#a78bfa" },
+          { symbol: "ΔS", value: `${num(dNow, 1)} km`, color: "#fb923c" },
+          { symbol: "v", value: `${num(vNow, 1)} km/h`, color: inLeg1 ? Q.t1.color : Q.t2.color },
+          { symbol: "v média", value: `${num(now.tH > 0 ? dNow / now.tH : 0, 1)} km/h`, color: Q.vm.color, note: "até agora" },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 5 · Velocidade em trechos</p>

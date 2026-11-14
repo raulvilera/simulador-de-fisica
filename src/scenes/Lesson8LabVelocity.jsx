@@ -8,6 +8,7 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
+import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -103,6 +104,14 @@ export default function Lesson8LabVelocity() {
           />
         )}
       </SceneShell>
+      <LiveHud
+        phase={running ? "andando" : prog >= 1 ? "chegou" : "parado"}
+        items={[
+          { symbol: "Δt", value: `${c2(elapsed)} s`, color: Q.dt.color, note: "cronômetro" },
+          { symbol: "ΔS", value: `${num(prog * dsCalc, 1)} cm`, color: Q.ds.color, note: "até agora" },
+          { symbol: "V", value: `${num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s`, color: Q.v.color },
+        ]}
+      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 8 · Desafio experimental</p>
