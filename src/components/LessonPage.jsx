@@ -5,6 +5,7 @@ import { useAppStore } from "../store/useAppStore.js";
 import "./LessonLayout.css";
 import Annotations from "./Annotations.jsx";
 import { useConcepts } from "../scenes/quantities.jsx";
+import { usePopupPin } from "../scenes/planetInfo.jsx";
 
 import Lesson1History from "../scenes/Lesson1History.jsx";
 import Lesson2ReferenceFrame from "../scenes/Lesson2ReferenceFrame.jsx";
@@ -78,7 +79,10 @@ const SHEET_ORDER = ["min", "half", "full"];
 function LessonView({ lesson, mode, SceneComponent }) {
   const [sheet, setSheet] = useState("half");
   // cada aula começa com todas as etiquetas de conceitos visíveis
-  useEffect(() => useConcepts.getState().showAll(), []);
+  useEffect(() => {
+    useConcepts.getState().showAll();
+    usePopupPin.getState().setPin(null);
+  }, []);
   const touchStartY = useRef(null);
 
   const step = (dir) =>

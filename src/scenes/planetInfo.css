@@ -32,6 +32,44 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: -10px -12px 0;
+  padding: 8px 12px 6px;
+  border-radius: 12px 12px 0 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.ppop__head:active {
+  cursor: grabbing;
+}
+
+.ppop__grip {
+  color: #6b7499;
+  font-size: 0.95rem;
+  margin-right: -2px;
+}
+
+/* solto na tela: sem deslocamento e sem a setinha para o planeta */
+.ppop--pinned {
+  left: 0;
+  transform: none;
+  border-color: #7dd3fc;
+}
+
+.ppop--pinned::before {
+  display: none;
+}
+
+.ppop__unpin {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  background: rgba(125, 211, 252, 0.1);
+  color: #bae6fd;
+  font-size: 0.74rem;
+  cursor: pointer;
 }
 
 .ppop__head b {
