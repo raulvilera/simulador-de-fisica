@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
+import { create } from "zustand";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
@@ -10,27 +11,51 @@ import "./quantities.css";
 // Tocar numa etiqueta oculta aquela grandeza (etiqueta + seta); o painel tem
 // os botões para mostrar de novo.
 
+// Estado global das etiquetas ocultas (vale para a aula aberta; ao trocar de
+// aula tudo volta a aparecer). Assim a etiqueta da cena, os botões do painel e
+// o botão "mostrar etiquetas" da barra da caneta ficam sempre de acordo.
+export const useConcepts = create((set) => ({
+  hidden: new Set(),
+  hide: (id) => set((s) => ({ hidden: new Set(s.hidden).add(id) })),
+  toggle: (id) =>
+    set((s) => {
+      const n = new Set(s.hidden);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return { hidden: n };
+    }),
+  hideMany: (ids) => set((s) => ({ hidden: new Set([...s.hidden, ...ids]) })),
+  showMany: (ids) => set((s) => ({ hidden: new Set([...s.hidden].filter((h) => !ids.includes(h))) })),
+  showAll: () => set({ hidden: new Set() }),
+}));
+
+export const useConceptVisible = (id) => useConcepts((s) => !s.hidden.has(id));
+
+// Atalho para uma lista de grandezas de uma aula.
 export function useQuantityVisibility(ids) {
-  const [hidden, setHidden] = useState(() => new Set());
+  const hidden = useConcepts((s) => s.hidden);
+  const { hide, toggle, hideMany, showMany } = useConcepts.getState();
   return {
     isVisible: (id) => !hidden.has(id),
-    hide: (id) => setHidden((h) => new Set(h).add(id)),
-    toggle: (id) =>
-      setHidden((h) => {
-        const n = new Set(h);
-        if (n.has(id)) n.delete(id);
-        else n.add(id);
-        return n;
-      }),
-    showAll: () => setHidden(new Set()),
-    hideAll: () => setHidden(new Set(ids)),
+    hide,
+    toggle,
+    showAll: () => showMany(ids),
+    hideAll: () => hideMany(ids),
     noneVisible: ids.every((id) => hidden.has(id)),
-    allVisible: hidden.size === 0,
+    allVisible: ids.every((id) => !hidden.has(id)),
   };
 }
 
 // Etiqueta clicável presa a um ponto da cena.
-export function QuantityTag({ position = [0, 0, 0], color, symbol, name, value, onHide }) {
+// Com `id`, a etiqueta some sozinha ao ser tocada (estado global).
+export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, value, onHide }) {
+  const key = id ?? q?.id;
+  const visible = useConcepts((s) => !key || !s.hidden.has(key));
+  if (!visible) return null;
+  color = color ?? q?.color;
+  symbol = symbol ?? q?.symbol;
+  name = name ?? q?.name;
+  const hideIt = onHide ?? (key ? () => useConcepts.getState().hide(key) : undefined);
   return (
     <Html position={position} center zIndexRange={[2, 0]}>
       <button
@@ -39,7 +64,7 @@ export function QuantityTag({ position = [0, 0, 0], color, symbol, name, value, 
         style={{ "--qc": color }}
         onClick={(e) => {
           e.stopPropagation();
-          onHide?.();
+          hideIt?.();
         }}
         onPointerDown={(e) => e.stopPropagation()}
         title="Toque para ocultar esta grandeza"
@@ -150,7 +175,9 @@ export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, fl
 }
 
 // Painel: liga/desliga cada grandeza (as cores são as mesmas da cena).
-export function QuantityToggles({ items, vis }) {
+export function QuantityToggles({ items, vis: given }) {
+  const own = useQuantityVisibility(items.map((q) => q.id));
+  const vis = given ?? own;
   return (
     <div className="panel__section qtoggles">
       <h3>Grandezas na cena</h3>
@@ -187,17 +214,22 @@ export function QuantityToggles({ items, vis }) {
 }
 
 // Termo colorido de uma fórmula; clicar mostra/oculta a grandeza na cena.
-export function Term({ q, vis, children }) {
-  const on = vis.isVisible(q.id);
+export function Term({ q, children }) {
+  const on = useConceptVisible(q.id);
   return (
     <button
       type="button"
       className={`qterm${on ? "" : " is-off"}`}
       style={{ "--qc": q.color }}
-      onClick={() => vis.toggle(q.id)}
+      onClick={() => useConcepts.getState().toggle(q.id)}
       title={`${q.name} — ${on ? "ocultar" : "mostrar"} na cena`}
     >
       {children ?? q.symbol}
     </button>
   );
+}
+
+// Mostra os filhos só enquanto a grandeza `id` estiver visível (setas etc.).
+export function Concept({ id, children }) {
+  return useConceptVisible(id) ? children : null;
 }

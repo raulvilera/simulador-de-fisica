@@ -3,6 +3,18 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  v1: { id: "v1", symbol: "V1", name: "velocidade com impulso fraco", color: "#3b82f6" },
+  v2: { id: "v2", symbol: "V2", name: "velocidade com impulso forte", color: "#ef4444" },
+  dv: { id: "dv", symbol: "ΔV", name: "variação da velocidade = V2 − V1", color: "#fbbf24" },
+  dt: { id: "dt", symbol: "Δt", name: "tempo entre as medições", color: "#a78bfa" },
+  a: { id: "a", symbol: "a", name: "aceleração = ΔV ÷ Δt", color: "#4ade80" },
+};
+const Q_LIST = Object.values(Q);
+const c = (v, n = 1) => v.toFixed(n).replace(".", ",");
 
 const SCENE_LENGTH = 8;
 
@@ -30,7 +42,7 @@ export default function Lesson9LabAcceleration() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell setting="lab" cameraPosition={[2, 2.4, 8.5]} controlsTarget={[4.2, 0.2, 0]}>
+      <SceneShell setting="lab" cameraPosition={[2.2, 3, 10]} controlsTarget={[3.8, 0.8, 0]}>
         <RulerTrack length={SCENE_LENGTH} start={0} />
         <FrictionCart
           running={running}
@@ -38,6 +50,15 @@ export default function Lesson9LabAcceleration() {
           resetKey={resetKey}
           onFinish={onFinish}
         />
+        <QuantityTag q={Q.v1} position={[1.6, 1.7, 0]} value={v1 != null ? `= ${c(v1)} cm/s` : "= ? (faça a medição 1)"} />
+        <QuantityTag q={Q.v2} position={[6.4, 1.7, 0]} value={v2 != null ? `= ${c(v2)} cm/s` : "= ? (faça a medição 2)"} />
+        <QuantityTag q={Q.dt} position={[4, 1.7, 0]} value={`= ${c(dt)} s`} />
+        {deltaV != null && (
+          <>
+            <QuantityTag q={Q.dv} position={[2.6, 2.7, 0]} value={`= ${c(v2)} − ${c(v1)} = ${c(deltaV)} cm/s`} />
+            <QuantityTag q={Q.a} position={[5.6, 2.7, 0]} value={`= ${c(deltaV)} ÷ ${c(dt)} = ${c(accel, 2)} cm/s²`} />
+          </>
+        )}
       </SceneShell>
 
       <div className="panel">
@@ -76,6 +97,7 @@ export default function Lesson9LabAcceleration() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 10 }}>
           Faça a medição 1 (impulso fraco) e a medição 2 (impulso forte); a cena calcula a variação
           de velocidade (ΔV) e, dividindo pelo intervalo de tempo entre as medições, obtém a

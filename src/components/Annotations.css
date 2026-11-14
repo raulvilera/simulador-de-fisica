@@ -122,6 +122,27 @@
   box-shadow: 0 0 0 2px #7dd3fc;
 }
 
+.annot__showTags {
+  position: relative;
+  min-width: 38px;
+  height: 38px;
+}
+
+.annot__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #fb923c;
+  color: #111827;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 17px;
+}
+
 .annot__clearMini {
   width: 38px;
   height: 38px;
@@ -182,6 +203,7 @@
   .annot__tool,
   .annot__size {
     width: 34px;
+    min-width: 34px;
     flex: 0 0 auto;
   }
   .annot__swatch {

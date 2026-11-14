@@ -3,6 +3,17 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag, Sun, Earth, Planet, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  rot: { id: "rot", symbol: "Rotação", name: "≈ 24 h: dia e noite", color: "#38bdf8" },
+  trans: { id: "trans", symbol: "Translação", name: "365 dias e 6 h ao redor do Sol", color: "#60a5fa" },
+  eixo: { id: "eixo", symbol: "Eixo inclinado", name: "23,5°: causa as estações do ano", color: "#e5e9f5" },
+  fase: { id: "fase", symbol: "Fase da Lua", name: "parte iluminada vista da Terra", color: "#facc15" },
+  eclipse: { id: "eclipse", symbol: "Eclipse", name: "sombra por alinhamento", color: "#f87171" },
+};
+const Q_LIST = Object.values(Q);
 
 const R_EARTH = 8; // raio da órbita da Terra na cena
 const R_MOON = 1.9; // raio da órbita da Lua na cena
@@ -16,7 +27,7 @@ const SEASONS = ["Verão", "Outono", "Inverno", "Primavera"];
 
 const phaseAngle = (day) => ((day % MONTH) / MONTH) * 360; // 0° = Lua entre a Terra e o Sol
 
-function Bodies({ day, eclipse, showOrbits }) {
+function Bodies({ day, eclipse, showOrbits, phase, season }) {
   const earthSpin = useRef();
   const ea = (day / YEAR) * Math.PI * 2;
   const ex = Math.cos(ea) * R_EARTH;
@@ -36,6 +47,15 @@ function Bodies({ day, eclipse, showOrbits }) {
       <Sun radius={1.3} />
       <Tag position={[0, 2, 0]} color="#ffc94d">Sol</Tag>
       {showOrbits && <OrbitRing radius={R_EARTH} color="#3b82f6" />}
+      <QuantityTag q={Q.trans} position={[-R_EARTH * 0.71, 0.3, -R_EARTH * 0.71]} />
+      {eclipse && (
+        <QuantityTag
+          q={Q.eclipse}
+          position={[0, 3.3, 0]}
+          value={eclipse === "solar" ? "solar: Sol – Lua – Terra" : "lunar: Sol – Terra – Lua"}
+          name={eclipse === "solar" ? "a Lua (nova) tapa o Sol" : "a Lua (cheia) entra na sombra da Terra"}
+        />
+      )}
       <group position={[ex, 0, ez]}>
         <group rotation={[0, 0, -TILT]}>
           <group ref={earthSpin}>
@@ -48,10 +68,13 @@ function Bodies({ day, eclipse, showOrbits }) {
           </mesh>
         </group>
         <Tag position={[0, 1.35, 0]} color="#7dd3fc">Terra</Tag>
+        <QuantityTag q={Q.rot} position={[0, -1.25, 0]} />
+        <QuantityTag q={Q.eixo} position={[0.5, 2.1, 0]} value={`estação: ${season}`} />
         {showOrbits && <OrbitRing radius={R_MOON} color="#64748b" />}
         <group position={[mx, 0, mz]}>
           <Planet radius={0.18} color={eclipse === "lunar" ? "#b4442b" : "#cbd5e1"} emissive={eclipse === "lunar" ? 0.5 : 0} />
           <Tag position={[0, 0.45, 0]} size={0.22}>Lua</Tag>
+          <QuantityTag q={Q.fase} position={[0, 1.05, 0]} value={phase} />
         </group>
         {/* cone de sombra desenhado só quando há alinhamento (eclipse) */}
         {eclipse && (
@@ -106,7 +129,7 @@ export default function Lesson18EarthMoon() {
     <div className="lesson__canvas">
       <SceneShell space cameraPosition={[0, 13, 22]} controlsTarget={[0, 0, 0]} maxDistance={40}>
         <Clock playing={playing} speed={speed} setDay={setDay} />
-        <Bodies day={day} eclipse={eclipse} showOrbits={orbits} />
+        <Bodies day={day} eclipse={eclipse} showOrbits={orbits} phase={phase} season={season} />
       </SceneShell>
 
       <Panel eyebrow="Aula 18 · Sistema Sol-Terra-Lua" title="Movimentos da Terra e da Lua">
@@ -149,6 +172,7 @@ export default function Lesson18EarthMoon() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           <b>Rotação</b> (cerca de 24 h): dia e noite. <b>Translação</b> (365 dias e 6 horas),
           combinada com o eixo inclinado 23,5°: estações do ano. A Lua completa uma volta ao redor

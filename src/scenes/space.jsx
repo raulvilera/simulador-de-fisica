@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Line, useTexture } from "@react-three/drei";
 import { Label3D } from "./primitives.jsx";
+import { useConcepts } from "./quantities.jsx";
 
 // Peças reutilizáveis das cenas de Astronomia (Aulas 10 a 20). Tudo é gerado
 // por código (sem fotos/texturas baixadas), então funciona offline como as
@@ -53,10 +54,28 @@ export function Check({ label, checked, onChange }) {
 }
 
 // Rótulo 3D que sempre fica de frente para a câmera.
-export function Tag({ position = [0, 0, 0], children, color = "#e5e9f5", size = 0.26 }) {
+// Rótulo 3D (nome de astro etc.). Tocar nele oculta o rótulo; o botão 👁 da
+// barra da caneta ou do painel mostra de novo.
+export function Tag({ position = [0, 0, 0], children, color = "#e5e9f5", size = 0.26, id }) {
+  const key = id ?? `tag:${String(children)}`;
+  const visible = useConcepts((s) => !s.hidden.has(key));
+  if (!visible) return null;
   return (
     <Billboard position={position}>
-      <Label3D fontSize={size} color={color} anchorX="center" anchorY="middle">
+      <Label3D
+        fontSize={size}
+        color={color}
+        anchorX="center"
+        anchorY="middle"
+        onClick={(e) => {
+          if (e.delta > 6) return; // foi um arrasto da câmera, não um toque
+          e.stopPropagation();
+          document.body.style.cursor = "";
+          useConcepts.getState().hide(key);
+        }}
+        onPointerOver={() => (document.body.style.cursor = "pointer")}
+        onPointerOut={() => (document.body.style.cursor = "")}
+      >
         {children}
       </Label3D>
     </Billboard>

@@ -4,6 +4,17 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Check, Tag, Sun, OrbitRing } from "./space.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  radiacao: { id: "radiacao", symbol: "Radiação", name: "energia da estrela; diminui com a distância", color: "#fde047" },
+  dist: { id: "dist", symbol: "Distância", name: "1 UA = distância Terra–Sol", color: "#e5e9f5" },
+  temp: { id: "temp", symbol: "T", name: "temperatura média do planeta", color: "#fb923c" },
+  agua: { id: "agua", symbol: "Água", name: "estado físico", color: "#38bdf8" },
+  estufa: { id: "estufa", symbol: "Efeito estufa", name: "atmosfera retém calor (+33 °C)", color: "#9bd4ff" },
+};
+const Q_LIST = Object.values(Q);
 
 const UA = 5; // 1 unidade astronômica (distância Terra-Sol) em unidades de cena
 const VENUS = 0.72;
@@ -21,7 +32,7 @@ function waterState(t) {
   return { label: "Líquida", color: "#2f7de0" };
 }
 
-function OrbitingPlanet({ dist, color, greenhouse }) {
+function OrbitingPlanet({ dist, color, greenhouse, children }) {
   const ref = useRef();
   const angle = useRef(0.6);
   useFrame((_, delta) => {
@@ -41,6 +52,7 @@ function OrbitingPlanet({ dist, color, greenhouse }) {
         </mesh>
       )}
       <Tag position={[0, 0.8, 0]}>planeta</Tag>
+      {children}
     </group>
   );
 }
@@ -77,7 +89,13 @@ export default function Lesson19HabitableZone() {
           </>
         )}
         <OrbitRing radius={dist * UA} color="#ffffff" lineWidth={1.5} />
-        <OrbitingPlanet dist={dist} color={water.color} greenhouse={greenhouse} />
+        <OrbitingPlanet dist={dist} color={water.color} greenhouse={greenhouse}>
+          <QuantityTag q={Q.temp} position={[0, 1.6, 0]} value={`≈ ${t.toFixed(0)} °C`} />
+          <QuantityTag q={Q.agua} position={[2.4, -0.3, 0]} value={water.label} name={inZone ? "dentro da zona habitável" : "fora da zona habitável"} />
+          {greenhouse && <QuantityTag q={Q.estufa} position={[-2.4, -0.3, 0]} />}
+        </OrbitingPlanet>
+        <QuantityTag q={Q.radiacao} position={[0, -1.7, 0]} value={`${(100 / (dist * dist)).toFixed(0)} % da Terra`} />
+        <QuantityTag q={Q.dist} position={[0, 0.3, dist * UA]} value={`= ${dist.toFixed(2).replace(".", ",")} UA`} />
       </SceneShell>
 
       <Panel eyebrow="Aula 19 · Astrobiologia" title="Vida fora da Terra: a zona habitável">
@@ -94,6 +112,7 @@ export default function Lesson19HabitableZone() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           A temperatura de um planeta depende da distância até sua estrela. Na{" "}
           <b>zona habitável</b> (no Sistema Solar, entre Vênus e Marte) a radiação recebida permite

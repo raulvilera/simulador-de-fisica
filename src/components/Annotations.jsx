@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./Annotations.css";
+import { useConcepts } from "../scenes/quantities.jsx";
 
 // Caneta de anotação por cima da cena 3D. Com a caneta ligada, o toque/mouse
 // desenha em vez de girar a câmera; com ela desligada, os traços continuam
@@ -73,6 +74,8 @@ export default function Annotations() {
   const [color, setColor] = useState(COLORS[0].value);
   const [size, setSize] = useState(SIZES[1].value);
   const [count, setCount] = useState(0); // nº de traços (para habilitar desfazer/limpar)
+  const hiddenTags = useConcepts((s) => s.hidden.size);
+  const showAllTags = useConcepts((s) => s.showAll);
 
   const canvasRef = useRef(null);
   const strokes = useRef([]);
@@ -259,6 +262,18 @@ export default function Annotations() {
               </button>
             </div>
           </>
+        )}
+
+        {hiddenTags > 0 && (
+          <button
+            type="button"
+            className="annot__tool annot__showTags"
+            onClick={showAllTags}
+            title="Mostrar de novo as etiquetas que foram ocultadas"
+            aria-label={`Mostrar ${hiddenTags} etiqueta(s) ocultada(s)`}
+          >
+            👁<span className="annot__badge">{hiddenTags}</span>
+          </button>
         )}
 
         {!active && count > 0 && (

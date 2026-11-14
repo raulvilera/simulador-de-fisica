@@ -3,9 +3,19 @@ import { useFrame, useThree } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
 
 const V_JOAO = 3; // m/s (velocidade do carro de João, no referencial do solo)
 const V_OUTRO = 5; // m/s (velocidade do outro carro)
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  ref: { id: "ref", symbol: "Referencial", name: "de onde o movimento é observado", color: "#facc15" },
+  vj: { id: "vj", symbol: "v João", name: "velocidade de João", color: "#60a5fa" },
+  vo: { id: "vo", symbol: "v outro", name: "velocidade do outro carro", color: "#f87171" },
+  traj: { id: "traj", symbol: "Trajetória", name: "caminho seguido pelos carros", color: "#4ade80" },
+};
+const Q_LIST = Object.values(Q);
 
 function Road({ playing, frame }) {
   const joaoRef = useRef();
@@ -47,13 +57,37 @@ function Road({ playing, frame }) {
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#93c5fd">
           João
         </Label3D>
+        <QuantityTag
+          q={Q.vj}
+          position={[0, 2.05, 0]}
+          value={frame === "solo" ? `= ${V_JOAO} m/s` : "= 0 m/s"}
+          name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
+        />
+        {frame === "joao" && (
+          <QuantityTag q={Q.ref} position={[0, 2.95, 0]} value="carro do João" name="o observador viaja com João" />
+        )}
       </group>
       <group ref={outroRef} position={[-4, 0.3, 0.62]}>
         <Vehicle color="#f87171" />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#fca5a5">
           outro carro
         </Label3D>
+        <QuantityTag
+          q={Q.vo}
+          position={[0, 2.05, 0]}
+          value={frame === "solo" ? `= ${V_OUTRO} m/s` : `= ${V_OUTRO - V_JOAO} m/s`}
+          name={frame === "solo" ? "em relação à rua" : "vista por João (5 − 3)"}
+        />
       </group>
+      {frame === "solo" && (
+        <>
+          <Concept id="ref">
+            <Pin x={0} z={2.2} height={1.6} color={Q.ref.color} />
+          </Concept>
+          <QuantityTag q={Q.ref} position={[0, 2.0, 2.2]} value="solo (rua)" name="observador parado na beira da pista" />
+        </>
+      )}
+      <QuantityTag q={Q.traj} position={[-7, 0.45, 1.6]} value="reta" name="caminho seguido pelos carros" />
     </>
   );
 }
@@ -109,6 +143,7 @@ export default function Lesson2ReferenceFrame() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Mude o referencial para "Carro do João": repare que o carro dele passa a ficar parado no
           centro da cena, e a velocidade do outro carro muda — porque a descrição do movimento

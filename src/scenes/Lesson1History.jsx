@@ -3,11 +3,22 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useMarbleTexture } from "./settings.jsx";
-import { Ball, Label3D } from "./primitives.jsx";
+import { Arrow3D, Ball } from "./primitives.jsx";
+import { QuantityTag, QuantityToggles, Pin, Concept } from "./quantities.jsx";
 import { Readout } from "../components/ui.jsx";
 
 const TOWER_HEIGHT = 9;
 const G = 9.8;
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  m: { id: "m", symbol: "m", name: "massas diferentes", color: "#f87171" },
+  h: { id: "h", symbol: "h", name: "altura da queda", color: "#a78bfa" },
+  g: { id: "g", symbol: "g", name: "aceleração da gravidade", color: "#fbbf24" },
+  ar: { id: "ar", symbol: "ar", name: "resistência do ar", color: "#7dd3fc" },
+  t: { id: "t", symbol: "t", name: "tempo de queda", color: "#4ade80" },
+};
+const Q_LIST = Object.values(Q);
 
 function FallingBalls({ dropping, aristotleMode, onLanded }) {
   const heavyRef = useRef();
@@ -41,16 +52,12 @@ function FallingBalls({ dropping, aristotleMode, onLanded }) {
     <>
       <group ref={heavyRef} position={[-0.6, TOWER_HEIGHT, 0]}>
         <Ball position={[0, 0, 0]} color="#f87171" radius={0.38} />
+        <QuantityTag id="m" position={[-1.1, 0.35, 0]} color="#f87171" symbol="m maior" name="esfera pesada" />
       </group>
       <group ref={lightRef} position={[0.6, TOWER_HEIGHT, 0]}>
         <Ball position={[0, 0, 0]} color="#38bdf8" radius={0.22} />
+        <QuantityTag id="m" position={[1.1, 0.35, 0]} color="#38bdf8" symbol="m menor" name="esfera leve" />
       </group>
-      <Label3D position={[-0.6, TOWER_HEIGHT + 0.6, 0]} fontSize={0.3} color="#f87171">
-        pesada
-      </Label3D>
-      <Label3D position={[0.6, TOWER_HEIGHT + 0.6, 0]} fontSize={0.3} color="#38bdf8">
-        leve
-      </Label3D>
     </>
   );
 }
@@ -139,6 +146,41 @@ export default function Lesson1History() {
       <SceneShell setting="pisa" cameraPosition={[7.5, 3, 15]} controlsTarget={[0, 4.3, -0.6]} maxDistance={22}>
         <Tower />
         <FallingBalls key={resetKey} dropping={dropping} aristotleMode={aristotleMode} onLanded={setLandTime} />
+
+        {/* h: altura de onde as esferas são soltas */}
+        <Concept id="h">
+          <Pin x={2.1} z={0} height={TOWER_HEIGHT} color={Q.h.color} />
+        </Concept>
+        <QuantityTag q={Q.h} position={[2.9, TOWER_HEIGHT / 2, 0]} value={`= ${TOWER_HEIGHT} m`} />
+
+        {/* g: aceleração da gravidade, apontando para baixo */}
+        <Concept id="g">
+          <group position={[-2.3, 7.4, 0]} rotation={[0, 0, -Math.PI / 2]}>
+            <Arrow3D from={[0, 0, 0]} length={2.2} color={Q.g.color} />
+          </group>
+        </Concept>
+        <QuantityTag
+          q={Q.g}
+          position={[-3.6, 6.3, 0]}
+          value="≈ 9,8 m/s²"
+          name={aristotleMode ? "Aristóteles: maior para o mais pesado (errado)" : "Galileu: igual para as duas massas"}
+        />
+
+        <QuantityTag
+          q={Q.ar}
+          position={[-2.6, TOWER_HEIGHT + 1.1, 0]}
+          value="desprezada"
+          name="sem ar, pena e martelo caem juntos"
+        />
+
+        {landTime && (
+          <QuantityTag
+            q={Q.t}
+            position={[0, 1.4, 1.4]}
+            value={`= ${landTime.replace(".", ",")} s`}
+            name={aristotleMode ? "a pesada chegou antes (modelo errado)" : "as duas chegam juntas ao chão"}
+          />
+        )}
       </SceneShell>
 
       <div className="panel">
@@ -168,6 +210,7 @@ export default function Lesson1History() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Desative a "visão aristotélica" para reproduzir o experimento real: desprezando a
           resistência do ar, corpos de massas diferentes caem com a mesma aceleração (g ≈ 9,8 m/s²),

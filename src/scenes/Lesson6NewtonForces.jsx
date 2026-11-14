@@ -3,6 +3,19 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles, Concept } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  f1: { id: "f1", symbol: "F1", name: "força da pessoa de azul", color: "#3b82f6" },
+  f2: { id: "f2", symbol: "F2", name: "força da pessoa de vermelho", color: "#f87171" },
+  fres: { id: "fres", symbol: "FRes", name: "força resultante", color: "#fbbf24" },
+  m: { id: "m", symbol: "m", name: "massa do caixote", color: "#a78bfa" },
+  a: { id: "a", symbol: "a", name: "aceleração = FRes ÷ m", color: "#4ade80" },
+  rr: { id: "rr", symbol: "ação e reação", name: "3ª Lei de Newton", color: "#f472b6" },
+};
+const Q_LIST = Object.values(Q);
+const f2d = (v) => v.toFixed(2).replace(".", ",");
 
 export default function Lesson6NewtonForces() {
   const [mass, setMass] = useState(40); // kg
@@ -17,8 +30,8 @@ export default function Lesson6NewtonForces() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell setting="yard" fov={50} cameraPosition={[2.2, 2.3, 8.2]} controlsTarget={[0.4, 0.9, 0]}>
-        <PushedBox key={resetKey} playing={playing} accel={accel} f1={f1} f2={f2} fRes={fRes} opposite={opposite} />
+      <SceneShell setting="yard" fov={50} cameraPosition={[-0.6, 2.7, 9]} controlsTarget={[-1.2, 1.3, 0]}>
+        <PushedBox key={resetKey} playing={playing} accel={accel} mass={mass} f1={f1} f2={f2} fRes={fRes} opposite={opposite} />
       </SceneShell>
 
       <div className="panel">
@@ -53,6 +66,7 @@ export default function Lesson6NewtonForces() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           2ª Lei de Newton: F<sub>Res</sub> = m·a. Quando as forças têm sentidos opostos, a
           resultante é a diferença entre elas. A 3ª Lei (ação e reação) aparece, por exemplo, nos pés
@@ -73,7 +87,7 @@ const LIMIT = 7; // meia largura do caixote
 const SCALE = 1 / 25; // comprimento da seta: 1 unidade a cada 25 N
 const arrowLen = (f) => Math.max(Math.abs(f) * SCALE, 0.45);
 
-function PushedBox({ playing, accel, f1, f2, fRes, opposite }) {
+function PushedBox({ playing, accel, mass, f1, f2, fRes, opposite }) {
   const ref = useRef();
   const state = useRef({ x: START_X, v: 0 });
 
@@ -108,27 +122,55 @@ function PushedBox({ playing, accel, f1, f2, fRes, opposite }) {
 
       {/* forças aplicadas no caixote */}
       {f1 > 0 && (
-        <Arrow3D from={[HALF + 0.08, 0.75, 0.64]} length={arrowLen(f1)} color="#3b82f6" label={`F1 = ${f1} N`} />
+        <Concept id="f1">
+          <Arrow3D from={[HALF + 0.08, 0.75, 0.64]} length={arrowLen(f1)} color={Q.f1.color} />
+        </Concept>
+      )}
+      {f1 > 0 && (
+        <QuantityTag q={Q.f1} position={[HALF + 0.08 + arrowLen(f1) / 2, 1.05, 0.64]} value={`= ${f1} N`} />
       )}
       {f2 > 0 && (
-        <Arrow3D
-          from={opposite ? [-HALF - 0.08, 0.75, 0.64] : [HALF + 0.08, 1.3, 0]}
-          dir={opposite ? -1 : 1}
-          length={arrowLen(f2)}
-          color="#f87171"
-          label={`F2 = ${f2} N`}
+        <Concept id="f2">
+          <Arrow3D
+            from={opposite ? [-HALF - 0.08, 0.75, 0.64] : [HALF + 0.08, 1.3, 0]}
+            dir={opposite ? -1 : 1}
+            length={arrowLen(f2)}
+            color={Q.f2.color}
+          />
+        </Concept>
+      )}
+      {f2 > 0 && (
+        <QuantityTag
+          q={Q.f2}
+          position={
+            opposite
+              ? [-HALF - 0.08 - arrowLen(f2) / 2, 1.05, 0.64]
+              : [HALF + 0.08 + arrowLen(f2) / 2, 1.6, 0]
+          }
+          value={`= ${f2} N`}
         />
       )}
       {fRes !== 0 && (
-        <Arrow3D
-          from={[0, 2.3, 0]}
-          dir={Math.sign(fRes)}
-          length={arrowLen(fRes)}
-          thickness={1.5}
-          color="#fbbf24"
-          label={`FRes = ${Math.abs(fRes)} N`}
-        />
+        <Concept id="fres">
+          <Arrow3D from={[0, 2.3, 0]} dir={Math.sign(fRes)} length={arrowLen(fRes)} thickness={1.5} color={Q.fres.color} />
+        </Concept>
       )}
+      <QuantityTag
+        q={Q.fres}
+        position={[(Math.sign(fRes) * arrowLen(fRes)) / 2, 2.75, 0]}
+        value={`= ${opposite ? `${f1} − ${f2}` : `${f1} + ${f2}`} = ${fRes} N`}
+      />
+      <QuantityTag q={Q.m} position={[-0.55, HALF * 2 + 0.3, 0]} value={`= ${mass} kg`} />
+      <QuantityTag
+        q={Q.a}
+        position={[0, 3.45, 0]}
+        value={`= ${fRes} ÷ ${mass} = ${f2d(accel)} m/s²`}
+      />
+      <QuantityTag
+        q={Q.rr}
+        position={[-HALF - 0.9, 0.18, opposite ? 0.7 : 1]}
+        name="o pé empurra o chão para trás; o chão empurra a pessoa para frente"
+      />
     </group>
   );
 }

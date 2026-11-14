@@ -2,6 +2,16 @@ import { useMemo, useState } from "react";
 import { Line } from "@react-three/drei";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Check, Tag, Earth, CameraRig } from "./space.jsx";
+import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  obs: { id: "obs", symbol: "Observador", name: "nós, vendo o céu a partir da Terra", color: "#7dd3fc" },
+  const: { id: "const", symbol: "Constelação", name: "desenho que só existe visto da Terra", color: "#facc15" },
+  ast: { id: "ast", symbol: "Asterismo", name: "Três Marias: parte de Órion", color: "#f472b6" },
+  al: { id: "al", symbol: "Ano-luz", name: "distância que a luz percorre em 1 ano", color: "#4ade80" },
+};
+const Q_LIST = Object.values(Q);
 
 // Estrelas de Órion: posição aparente no céu (x, y) e distância aproximada até
 // a Terra, em anos-luz. Vistas da Terra parecem vizinhas; no espaço, não são.
@@ -53,7 +63,16 @@ export default function Lesson14SkyObservation() {
           <Tag position={[0, -0.6, 0]} color="#7dd3fc">
             Terra
           </Tag>
+          <QuantityTag q={Q.obs} position={[0, -1.3, 0]} />
         </group>
+        <QuantityTag q={Q.const} position={[positions[5][0] - 1.2, positions[5][1] - 1.3, positions[5][2]]} value="Órion" />
+        <QuantityTag q={Q.ast} position={[positions[3][0], positions[3][1] - 1.1, positions[3][2]]} />
+        <QuantityTag
+          q={Q.al}
+          position={[positions[6][0] + 1, positions[6][1] - 1, positions[6][2]]}
+          value="Rigel ≈ 860 a.l."
+          name="cada estrela está a uma distância diferente"
+        />
         {STARS.map((s, i) => (
           <group key={s.name} position={positions[i]}>
             <mesh>
@@ -111,6 +130,7 @@ export default function Lesson14SkyObservation() {
             </tbody>
           </table>
         </div>
+        <QuantityToggles items={Q_LIST} />
         <Note>
           Da Terra, as estrelas de <b>Órion</b> parecem próximas e formam um desenho — as três do
           meio são as <b>Três Marias</b>, um asterismo. Mudando o ponto de vista, o desenho se

@@ -2,8 +2,21 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
-import { Vehicle, RulerTrack } from "./primitives.jsx";
+import { Vehicle, RulerTrack, Arrow3D } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
+import { QuantityTag, QuantityToggles, Concept } from "./quantities.jsx";
+
+// Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
+const Q = {
+  f: { id: "f", symbol: "F motor", name: "força que empurra o carro", color: "#4ade80" },
+  fat: { id: "fat", symbol: "F atrito", name: "atrito + resistência do ar", color: "#f87171" },
+  fres: { id: "fres", symbol: "FRes", name: "F motor − F atrito", color: "#fbbf24" },
+  a: { id: "a", symbol: "a", name: "aceleração = FRes ÷ m", color: "#a78bfa" },
+  v: { id: "v", symbol: "v", name: "velocidade (aumenta com a aceleração)", color: "#38bdf8" },
+};
+const Q_LIST = Object.values(Q);
+const ARROW_SCALE = 1 / 1600; // 1 unidade de seta a cada 1600 N
+const aLen = (f) => Math.max(f * ARROW_SCALE, 0.45);
 
 export default function Lesson7NewtonForces2() {
   const [mass, setMass] = useState(800); // kg
@@ -19,9 +32,30 @@ export default function Lesson7NewtonForces2() {
 
   return (
     <div className="lesson__canvas">
-      <SceneShell cameraPosition={[4, 3.4, 14]} controlsTarget={[8, 0.2, 0]}>
+      <SceneShell cameraPosition={[2, 4.6, 18.5]} controlsTarget={[5.6, 1.4, 0]}>
         <RulerTrack length={16} start={0} />
-        <RaceCar key={resetKey} playing={playing} resetKey={resetKey} accel={accel} onUpdate={setLive} />
+        <RaceCar key={resetKey} playing={playing} resetKey={resetKey} accel={accel} onUpdate={setLive}>
+          <Concept id="f">
+            <Arrow3D from={[1.15, 0.45, 0.75]} length={aLen(force)} color={Q.f.color} />
+          </Concept>
+          <QuantityTag q={Q.f} position={[1.15 + aLen(force) / 2, 1.0, 0.75]} value={`= ${force} N`} />
+          {friction > 0 && (
+            <Concept id="fat">
+              <Arrow3D from={[-1.15, 0.45, 0.75]} dir={-1} length={aLen(friction)} color={Q.fat.color} />
+            </Concept>
+          )}
+          {friction > 0 && (
+            <QuantityTag q={Q.fat} position={[-1.15 - aLen(friction) / 2, 1.0, 0.75]} value={`= ${friction} N`} />
+          )}
+          {fRes > 0 && (
+            <Concept id="fres">
+              <Arrow3D from={[-0.2, 1.75, 0]} length={aLen(fRes)} thickness={1.4} color={Q.fres.color} />
+            </Concept>
+          )}
+          <QuantityTag q={Q.fres} position={[-0.2 + aLen(fRes) / 2, 2.2, 0]} value={`= ${force} − ${friction} = ${fRes} N`} />
+          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={`= ${fRes} ÷ ${mass} = ${accel.toFixed(2).replace(".", ",")} m/s²`} />
+          <QuantityTag q={Q.v} position={[0, 0, 2.7]} value={`= ${live.v.toFixed(1).replace(".", ",")} m/s`} />
+        </RaceCar>
       </SceneShell>
 
       <div className="panel">
@@ -55,6 +89,7 @@ export default function Lesson7NewtonForces2() {
             ]}
           />
         </div>
+        <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Para converter: km/h ÷ 3,6 = m/s. Aqui, quanto maior a força do motor e menor a massa ou o
           atrito, maior a aceleração resultante — exatamente como nos exercícios de corrida da aula.
@@ -64,7 +99,7 @@ export default function Lesson7NewtonForces2() {
   );
 }
 
-function RaceCar({ playing, resetKey, accel, onUpdate }) {
+function RaceCar({ playing, resetKey, accel, onUpdate, children }) {
   const ref = useRef();
   const state = useRef({ x: 0, v: 0, t: 0 });
   const report = useThrottled(onUpdate);
@@ -86,6 +121,7 @@ function RaceCar({ playing, resetKey, accel, onUpdate }) {
   return (
     <group key={resetKey} ref={ref} position={[0, 0.3, 0]}>
       <Vehicle color="#ef4444" />
+      {children}
     </group>
   );
 }
