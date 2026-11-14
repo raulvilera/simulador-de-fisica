@@ -22,11 +22,17 @@ export default function KeepInView({ targets, enabled = true, edgesOnly = false,
   const controls = useThree((s) => s.controls);
   const busy = useRef(false);
   const baseDist = useRef(null); // distância inicial da câmera (para voltar a ela)
+  const userZoom = useRef(false);
 
   useEffect(() => {
     if (!controls) return undefined;
     const start = () => (busy.current = true);
-    const end = () => (busy.current = false);
+    // o professor mexeu na câmera (girou ou deu zoom): a distância escolhida
+    // passa a ser respeitada — a câmera só desliza, sem afastar nem aproximar
+    const end = () => {
+      busy.current = false;
+      userZoom.current = true;
+    };
     controls.addEventListener("start", start);
     controls.addEventListener("end", end);
     return () => {
@@ -64,7 +70,7 @@ export default function KeepInView({ targets, enabled = true, edgesOnly = false,
 
     // vários objetos: afasta se não cabem; aproxima de novo (até a distância
     // inicial) quando eles voltam a ficar juntos
-    if (n > 1) {
+    if (n > 1 && !userZoom.current) {
       v.copy(c).project(camera);
       if (Math.abs(v.x) < 0.3 && Math.abs(v.y) < 0.3) {
         dir.copy(camera.position).sub(controls.target);
