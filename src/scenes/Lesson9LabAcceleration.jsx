@@ -7,7 +7,6 @@ import { useThrottled } from "./useThrottled.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -64,7 +63,30 @@ export default function Lesson9LabAcceleration() {
           onTick={setRun}
           resetKey={resetKey}
           onFinish={onFinish}
-        />
+        >
+          {/* valores da medição em andamento (o grupo do carrinho tem escala 0,7) */}
+          {run && (
+            <>
+              <QuantityTag id="tempo" position={[0, 2.6, 0]} color="#a78bfa" symbol="t" value={`= ${num(run.t)} s`} />
+              <QuantityTag
+                id="desloc"
+                position={[0, 1.85, 0]}
+                color="#fb923c"
+                symbol="d"
+                value={`= ${num(run.d, 1)} cm`}
+                name="distância desde a largada"
+              />
+              <QuantityTag
+                id="vagora"
+                position={[0, 1.1, 1.3]}
+                color={run.boost === 2 ? Q.v2.color : Q.v1.color}
+                symbol={`V${run.boost}`}
+                value={`= ${num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s`}
+                name="d ÷ t até agora"
+              />
+            </>
+          )}
+        </FrictionCart>
         <QuantityTag
           q={Q.v1}
           position={[1.6, 1.7, 0]}
@@ -83,16 +105,6 @@ export default function Lesson9LabAcceleration() {
           </>
         )}
       </SceneShell>
-      <LiveHud
-        phase={running && run ? `medição ${run.boost}` : deltaV != null ? "medições prontas" : "parado"}
-        items={[
-          { symbol: "t", value: `${num(run?.t ?? 0)} s`, color: Q.dt.color },
-          { symbol: "d", value: `${num(run?.d ?? 0, 1)} cm`, color: "#fb923c" },
-          { symbol: "V", value: `${num(run && run.t > 0 ? run.d / run.t : 0, 1)} cm/s`, color: run?.boost === 2 ? Q.v2.color : Q.v1.color },
-          { symbol: "ΔV", value: deltaV != null ? `${num(deltaV)} cm/s` : "—", color: Q.dv.color },
-          { symbol: "a", value: accel != null ? `${num(accel)} cm/s²` : "—", color: Q.a.color },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 9 · Desafio experimental</p>
@@ -225,7 +237,7 @@ export default function Lesson9LabAcceleration() {
 // 8 unidades de pista = 24 cm. O carrinho anda com a velocidade `speed` (cm/s)
 // digitada; negativa = de trás para a frente. Percursos muito longos/curtos
 // são acelerados/desacelerados na tela, sem mudar o valor medido.
-function FrictionCart({ objRef, running, boost, speed, resetKey, onFinish, onTick }) {
+function FrictionCart({ objRef, running, boost, speed, resetKey, onFinish, onTick, children }) {
   const ref = useRef();
   const t = useRef(0);
   const T = Math.abs(speed) > 1e-9 ? 24 / Math.abs(speed) : 0; // tempo real (s)
@@ -264,6 +276,7 @@ function FrictionCart({ objRef, running, boost, speed, resetKey, onFinish, onTic
       scale={0.7}
     >
       <Vehicle color={boost === 2 ? "#ef4444" : "#3b82f6"} rotationY={speed < 0 ? Math.PI : 0} />
+      {children}
     </group>
   );
 }

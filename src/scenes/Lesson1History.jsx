@@ -129,7 +129,17 @@ function FallingBalls({ objRef, dropping, theory, onLanded, onTick, h, g, live }
             color="#38bdf8"
             symbol="v"
             value={theory === "galileu" ? `= g·t = ${num(live.v, 1)} m/s` : `= ${num(live.v, 1)} m/s (constante)`}
-            name={`altura: ${num(live.y, 1)} m`}
+            name={theory === "galileu" ? "aumenta durante a queda" : "Aristóteles: não muda"}
+          />
+        )}
+        {live && live.t > 0 && live.y > 0.05 && (
+          <QuantityTag
+            id="altura"
+            position={[1.25, -1.05, 0]}
+            color="#a78bfa"
+            symbol="altura"
+            value={`= ${num(live.y, 1)} m`}
+            name="quanto falta para chegar ao chão"
           />
         )}
       </group>

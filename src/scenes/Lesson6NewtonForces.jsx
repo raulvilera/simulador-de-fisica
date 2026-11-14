@@ -8,7 +8,6 @@ import { Arrow3D, Crate, Pusher } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -38,7 +37,7 @@ export default function Lesson6NewtonForces() {
   // grandezas do instante atual (mudam quando as pessoas soltam o caixote)
   const fResNow = meas.done ? 0 : fRes;
   const aNow = meas.done ? 0 : accel;
-  const phase = meas.t <= 0 ? "parado" : !meas.done ? "empurrando" : meas.ended ? "fim (deslizou por inércia)" : "inércia";
+  const tNow = meas.t + (meas.coast ?? 0); // tempo total (empurrão + deslizamento)
 
   return (
     <div className="lesson__canvas">
@@ -61,28 +60,37 @@ export default function Lesson6NewtonForces() {
         {/* velocidade medida: acompanha o caixote (fora do componente, para não
             redesenhar as pessoas e o caixote a cada atualização) */}
         <FollowX target={followRef}>
+          {/* grandezas que mudam durante o movimento: cada uma na sua etiqueta */}
           {meas.t > 0 && (
-            <QuantityTag
-              id="agora"
-              position={[0, -0.95, 1.2]}
-              color="#38bdf8"
-              symbol="v"
-              value={`= ${num(meas.v)} m/s`}
-              name={`t = ${num(meas.t, 1)} s · andou ${num(meas.x, 1)} m${meas.done ? " · parou de empurrar" : ""}`}
-            />
+            <>
+              <QuantityTag
+                id="tempo"
+                position={[-1.55, -0.95, 1.2]}
+                color="#a78bfa"
+                symbol="t"
+                value={`= ${num(tNow, 1)} s`}
+                name={meas.done ? "tempo total (empurrão + deslizamento)" : "tempo de empurrão"}
+              />
+              <QuantityTag
+                id="agora"
+                position={[0, -0.95, 1.2]}
+                color="#38bdf8"
+                symbol="v"
+                value={`= ${num(meas.v)} m/s`}
+                name={meas.done ? "constante: ninguém empurra (inércia)" : "aumenta: v = a · t"}
+              />
+              <QuantityTag
+                id="desloc"
+                position={[1.6, -0.95, 1.2]}
+                color="#e5e9f5"
+                symbol="x"
+                value={`= ${num(meas.x, 1)} m`}
+                name="quanto o caixote já andou"
+              />
+            </>
           )}
         </FollowX>
       </SceneShell>
-      <LiveHud
-        phase={phase}
-        items={[
-          { symbol: "t", value: `${num(meas.t + (meas.coast ?? 0), 1)} s`, color: "#a78bfa" },
-          { symbol: "FRes", value: `${num(fResNow)} N`, color: Q.fres.color },
-          { symbol: "a", value: `${num(aNow)} m/s²`, color: Q.a.color },
-          { symbol: "v", value: `${num(meas.v)} m/s`, color: "#38bdf8" },
-          { symbol: "x", value: `${num(meas.x, 1)} m`, color: "#e5e9f5", note: "andou" },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 6 · 2ª e 3ª Leis de Newton</p>

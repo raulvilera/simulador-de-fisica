@@ -8,7 +8,6 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -104,22 +103,23 @@ export default function Lesson7NewtonForces2() {
             q={Q.v}
             position={[0, 0, 2.7]}
             value={`= ${num(live.v, 1)} m/s (${num(live.v * 3.6, 0)} km/h)`}
-            name={
-              live.t > 0 ? `t = ${num(live.t, 1)} s · andou ${num(live.x, 1)} m` : "velocidade (muda com a aceleração)"
-            }
+            name="velocidade (muda com a aceleração)"
           />
+          {live.t > 0 && (
+            <>
+              <QuantityTag id="tempo" position={[-2.6, 0, 2.7]} color="#a78bfa" symbol="t" value={`= ${num(live.t, 1)} s`} />
+              <QuantityTag
+                id="desloc"
+                position={[2.6, 0, 2.7]}
+                color="#e5e9f5"
+                symbol="x"
+                value={`= ${num(live.x, 1)} m`}
+                name="distância percorrida"
+              />
+            </>
+          )}
         </RaceCar>
       </SceneShell>
-      <LiveHud
-        phase={live.t <= 0 ? "parado" : stoppedNow ? "parou (freou)" : live.t >= RUN ? "fim" : fRes < 0 ? "freando" : "acelerando"}
-        items={[
-          { symbol: "t", value: `${num(live.t, 1)} s`, color: "#a78bfa" },
-          { symbol: "FRes", value: `${num(fResNow)} N`, color: Q.fres.color },
-          { symbol: "a", value: `${num(aNow)} m/s²`, color: Q.a.color },
-          { symbol: "v", value: `${num(live.v, 1)} m/s`, color: Q.v.color, note: `${num(live.v * 3.6, 0)} km/h` },
-          { symbol: "x", value: `${num(live.x, 1)} m`, color: "#e5e9f5", note: "andou" },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 7 · Aceleração e força</p>

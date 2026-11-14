@@ -8,7 +8,6 @@ import { niceStep, fmtNum } from "./scale.js";
 import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -83,8 +82,28 @@ export default function Lesson8LabVelocity() {
             q={Q.dt}
             position={[0, 1.9, 0]}
             value={`= ${c2(elapsed)} s`}
-            name={prog > 0 ? `ΔS até agora = ${num(prog * dsCalc, 1)} cm` : "tempo no cronômetro"}
+            name="tempo no cronômetro"
           />
+          {prog > 0 && (
+            <>
+              <QuantityTag
+                id="desloc"
+                position={[0, 1.35, 0]}
+                color="#fb923c"
+                symbol="ΔS"
+                value={`= ${num(prog * dsCalc, 1)} cm`}
+                name="distância desde a largada"
+              />
+              <QuantityTag
+                id="vagora"
+                position={[0, 0.8, 0.9]}
+                color="#4ade80"
+                symbol="V"
+                value={`= ${num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s`}
+                name="ΔS ÷ Δt até agora"
+              />
+            </>
+          )}
         </FrictionCart>
         <Concept id="ds">
           <SpanArrow getFrom={() => 0} getTo={() => SCENE_LENGTH} y={1.9} z={-0.6} color={Q.ds.color} />
@@ -104,14 +123,6 @@ export default function Lesson8LabVelocity() {
           />
         )}
       </SceneShell>
-      <LiveHud
-        phase={running ? "andando" : prog >= 1 ? "chegou" : "parado"}
-        items={[
-          { symbol: "Δt", value: `${c2(elapsed)} s`, color: Q.dt.color, note: "cronômetro" },
-          { symbol: "ΔS", value: `${num(prog * dsCalc, 1)} cm`, color: Q.ds.color, note: "até agora" },
-          { symbol: "V", value: `${num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s`, color: Q.v.color },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 8 · Desafio experimental</p>

@@ -8,7 +8,6 @@ import { Readout } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
 import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import LiveHud from "../components/LiveHud.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
 const EX_JOAO = 3;
@@ -37,7 +36,7 @@ const Q_LIST = Object.values(Q);
 // termina (nada de "teletransporte" de uma ponta à outra).
 const ROAD_END = 28;
 
-function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey }) {
+function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey, clockT = 0, xJ = 0, xO = -4 }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
@@ -104,8 +103,16 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           value={frame === "solo" ? `= ${f1(V_JOAO)} m/s` : "= 0 m/s"}
           name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
         />
+        <QuantityTag
+          id="posicoes"
+          position={[0, 2.75, 0]}
+          color={Q.vj.color}
+          symbol="x"
+          value={frame === "solo" ? `= ${num(xJ, 1)} m` : "= 0 m"}
+          name={frame === "solo" ? "posição em relação ao observador" : "João é a origem do próprio referencial"}
+        />
         {frame === "joao" && (
-          <QuantityTag q={Q.ref} position={[0, 2.95, 0]} value="carro do João" name="o observador viaja com João" />
+          <QuantityTag q={Q.ref} position={[0, 3.45, 0]} value="carro do João" name="o observador viaja com João" />
         )}
       </group>
       <group ref={outroRef} position={[-4, 0.3, 0.62]}>
@@ -119,7 +126,37 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           value={frame === "solo" ? `= ${f1(V_OUTRO)} m/s` : `= ${f1(V_OUTRO - V_JOAO)} m/s`}
           name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
         />
+        {/* posição que muda durante o movimento */}
+        <QuantityTag
+          id="posicoes"
+          position={[0, 2.75, 0]}
+          color={Q.vo.color}
+          symbol="x"
+          value={frame === "solo" ? `= ${num(xO, 1)} m` : `= ${num(xO - xJ, 1)} m`}
+          name={frame === "solo" ? "posição em relação ao observador" : "posição em relação ao João"}
+        />
       </group>
+      {/* tempo e distância entre os carros, mudando durante o movimento */}
+      {clockT > 0 && (
+        <>
+          <QuantityTag
+            id="tempo"
+            position={[OBS[0] + 1.6, 0.25, OBS[2]]}
+            color="#a78bfa"
+            symbol="t"
+            value={`= ${num(clockT, 1)} s`}
+            name="tempo de movimento"
+          />
+          <QuantityTag
+            id="entre"
+            position={[(xJ + xO) / 2, 1.25, 0]}
+            color="#e5e9f5"
+            symbol="distância"
+            value={`= ${num(Math.abs(xO - xJ), 1)} m`}
+            name={`entre os carros: muda ${num(Math.abs(V_OUTRO - V_JOAO))} m a cada segundo (v rel)`}
+          />
+        </>
+      )}
       {/* observador: uma pessoa parada na beira da pista */}
       <group ref={obsRef}>
         <StandingPerson position={OBS} rotationY={Math.PI} />
@@ -210,18 +247,11 @@ export default function Lesson2ReferenceFrame() {
           vO={V_OUTRO}
           onTick={setClock}
           onEnd={() => setPlaying(false)}
+          clockT={clock.t}
+          xJ={xJnow}
+          xO={xOnow}
         />
       </SceneShell>
-      <LiveHud
-        phase={clock.t <= 0 ? "parado" : playing ? "em movimento" : "fim / pausado"}
-        items={[
-          { symbol: "t", value: `${num(clock.t, 1)} s`, color: "#a78bfa" },
-          { symbol: "x João", value: `${num(xJnow, 1)} m`, color: Q.vj.color },
-          { symbol: "x outro", value: `${num(xOnow, 1)} m`, color: Q.vo.color },
-          { symbol: "distância", value: `${num(Math.abs(xOnow - xJnow), 1)} m`, color: "#e5e9f5", note: "entre eles" },
-          { symbol: "v rel", value: `${num(V_OUTRO - V_JOAO)} m/s`, color: Q.ref.color },
-        ]}
-      />
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 2 · Referencial</p>
