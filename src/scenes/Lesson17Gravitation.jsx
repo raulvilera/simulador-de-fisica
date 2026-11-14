@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Panel, Note, Choice, Tag, Sun, Earth, Planet, OrbitRing, ArrowBetween } from "./space.jsx";
-import { Readout, Slider, Formulas } from "../components/ui.jsx";
+import { Readout, Slider } from "../components/ui.jsx";
 import { QuantityTag, QuantityToggles } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -93,6 +94,8 @@ export default function Lesson17Gravitation() {
   const [moonAngle, setMoonAngle] = useState(0);
   const [playing, setPlaying] = useState(false);
 
+  const [mP, setMP] = useState(50); // F = m·g: massa de uma pessoa (kg)
+  const [gP, setGP] = useState(9.8);
   const force = (m1 * m2) / (d * d);
   const a = (moonAngle * Math.PI) / 180;
   const align = Math.abs(Math.cos(a)); // 1 = alinhados, 0 = ângulo reto
@@ -150,7 +153,60 @@ export default function Lesson17Gravitation() {
             </>
           )}
         </div>
-        <Formulas list={mode === "law" ? ["F ∝ m1 · m2 / d²", "F = m · g"] : []} />
+        {mode === "law" && (
+          <>
+            <FormulaCard
+              title="Lei da Gravitação Universal"
+              formula={<>F ∝ m<sub>1</sub> · m<sub>2</sub> ÷ d²</>}
+              terms={[
+                { symbol: "F", name: "força de atração gravitacional (igual nos dois corpos)", unit: "unid. relativas", color: "#f87171" },
+                { symbol: "m₁", name: "massa do corpo 1", color: "#93c5fd" },
+                { symbol: "m₂", name: "massa do corpo 2", color: "#fcd34d" },
+                { symbol: "d", name: "distância entre os centros dos corpos", color: "#aab3cf" },
+              ]}
+              inputs={[
+                { key: "m1", symbol: "m₁", value: m1, onChange: setM1, min: 1, max: 10, color: "#93c5fd" },
+                { key: "m2", symbol: "m₂", value: m2, onChange: setM2, min: 1, max: 10, color: "#fcd34d" },
+                { key: "d", symbol: "d", value: d, onChange: setD, min: 3, max: 10, color: "#aab3cf" },
+              ]}
+              steps={
+                <>
+                  F = {num(m1)} × {num(m2)} ÷ {num(d)}² = <b>{num(force)}</b>
+                  <br />
+                  com d = {num(2 * d)} (o dobro): F = <b>{num(force / 4)}</b> (÷ 4)
+                </>
+              }
+              note="Na cena, massas de 1 a 10 e distância de 3 a 10 (unidades relativas)."
+              onReset={() => {
+                setM1(6);
+                setM2(2);
+                setD(6);
+              }}
+            />
+            <FormulaCard
+              title="Peso (força da gravidade perto da superfície)"
+              formula={<>F = m · g</>}
+              terms={[
+                { symbol: "F", name: "peso: força com que o planeta atrai o corpo", unit: "N", color: "#f87171" },
+                { symbol: "m", name: "massa do corpo", unit: "kg", color: "#93c5fd" },
+                { symbol: "g", name: "aceleração da gravidade (Terra ≈ 9,8; Lua ≈ 1,6)", unit: "m/s²", color: "#fbbf24" },
+              ]}
+              inputs={[
+                { key: "m", symbol: "m", unit: "kg", value: mP, onChange: setMP, min: 0, max: 1000000, color: "#93c5fd" },
+                { key: "g", symbol: "g", unit: "m/s²", value: gP, onChange: setGP, min: 0, max: 1000, color: "#fbbf24" },
+              ]}
+              steps={
+                <>
+                  F = {num(mP)} × {num(gP)} = <b>{num(mP * gP)} N</b>
+                </>
+              }
+              onReset={() => {
+                setMP(50);
+                setGP(9.8);
+              }}
+            />
+          </>
+        )}
         <QuantityToggles items={mode === "law" ? Q_LAW : Q_TIDES} />
         {mode === "law" ? (
           <Note>

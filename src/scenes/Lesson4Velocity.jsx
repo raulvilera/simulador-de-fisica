@@ -4,7 +4,8 @@ import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -24,6 +25,7 @@ export default function Lesson4Velocity() {
   const [instSpeed, setInstSpeed] = useState(0);
 
   const vMedia = time > 0 ? (distance / time).toFixed(1) : "0";
+  const [kmh, setKmh] = useState(72); // conversor km/h → m/s
 
   return (
     <div className="lesson__canvas">
@@ -80,6 +82,51 @@ export default function Lesson4Velocity() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Velocidade média"
+          formula={
+            <>
+              <Term q={Q.vm}>v</Term> = <Term q={Q.ds} /> ÷ <Term q={Q.dt} />
+            </>
+          }
+          terms={[
+            { symbol: "v", name: "velocidade média: quanto a posição muda, em média, por unidade de tempo", unit: "km/h ou m/s", color: Q.vm.color },
+            { symbol: "ΔS", name: "deslocamento: variação da posição na viagem", unit: "km ou m", color: Q.ds.color },
+            { symbol: "Δt", name: "intervalo de tempo: quanto durou a viagem", unit: "h ou s", color: Q.dt.color },
+          ]}
+          inputs={[
+            { key: "ds", symbol: "ΔS", unit: "km", value: distance, onChange: setDistance, min: 0, max: 100000, color: Q.ds.color },
+            { key: "dt", symbol: "Δt", unit: "h", value: time, onChange: setTime, min: 0.01, max: 10000, color: Q.dt.color },
+          ]}
+          steps={
+            <>
+              v = {num(distance)} ÷ {num(time)} = <b>{num(distance / time)} km/h</b>
+              <br />= {num(distance / time)} ÷ 3,6 = <b>{num(distance / time / 3.6)} m/s</b>
+            </>
+          }
+          onReset={() => {
+            setDistance(200);
+            setTime(2);
+          }}
+        />
+
+        <FormulaCard
+          title="Conversão de unidades"
+          formula={<>v (m/s) = v (km/h) ÷ 3,6</>}
+          terms={[
+            { symbol: "km/h", name: "quilômetros por hora (velocímetro)", color: "#38bdf8" },
+            { symbol: "m/s", name: "metros por segundo (unidade do SI)", color: "#4ade80" },
+            { symbol: "3,6", name: "1 km/h = 1000 m ÷ 3600 s", color: "#fbbf24" },
+          ]}
+          inputs={[{ key: "kmh", symbol: "v", unit: "km/h", value: kmh, onChange: setKmh, min: 0, max: 100000, color: "#38bdf8" }]}
+          steps={
+            <>
+              {num(kmh)} ÷ 3,6 = <b>{num(kmh / 3.6)} m/s</b>
+            </>
+          }
+          onReset={() => setKmh(72)}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           A velocidade média (v = ΔS/Δt) descreve a viagem inteira. Já o velocímetro mostra a

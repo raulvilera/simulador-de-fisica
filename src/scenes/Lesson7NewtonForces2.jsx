@@ -4,7 +4,8 @@ import SceneShell from "./SceneShell.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack, Arrow3D } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -16,7 +17,7 @@ const Q = {
 };
 const Q_LIST = Object.values(Q);
 const ARROW_SCALE = 1 / 1600; // 1 unidade de seta a cada 1600 N
-const aLen = (f) => Math.max(f * ARROW_SCALE, 0.45);
+const aLen = (f) => Math.min(Math.max(f * ARROW_SCALE, 0.45), 6);
 
 export default function Lesson7NewtonForces2() {
   const [mass, setMass] = useState(800); // kg
@@ -26,6 +27,7 @@ export default function Lesson7NewtonForces2() {
   const [resetKey, setResetKey] = useState(0);
   const [live, setLive] = useState({ v: 0, x: 0, t: 0 });
 
+  const [kmh, setKmh] = useState(108); // conversor km/h → m/s
   const fRes = Math.max(force - friction, 0);
   const accel = mass > 0 ? fRes / mass : 0;
   const vKmh = live.v * 3.6;
@@ -89,6 +91,55 @@ export default function Lesson7NewtonForces2() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Força resultante e aceleração"
+          formula={
+            <>
+              <Term q={Q.fres} /> = <Term q={Q.f}>F</Term> − <Term q={Q.fat}>Fat</Term> · <Term q={Q.a} /> = FRes ÷ m
+            </>
+          }
+          terms={[
+            { symbol: "F", name: "força do motor (empurra para frente)", unit: "N", color: Q.f.color },
+            { symbol: "Fat", name: "atrito + resistência do ar (contra o movimento)", unit: "N", color: Q.fat.color },
+            { symbol: "FRes", name: "força resultante: o que sobra para acelerar", unit: "N", color: Q.fres.color },
+            { symbol: "m", name: "massa do carro", unit: "kg", color: "#e5e9f5" },
+            { symbol: "a", name: "aceleração", unit: "m/s²", color: Q.a.color },
+          ]}
+          inputs={[
+            { key: "m", symbol: "m", unit: "kg", value: mass, onChange: setMass, min: 1, max: 100000, color: "#e5e9f5" },
+            { key: "f", symbol: "F", unit: "N", value: force, onChange: setForce, min: 0, max: 1000000, color: Q.f.color },
+            { key: "fat", symbol: "Fat", unit: "N", value: friction, onChange: setFriction, min: 0, max: 1000000, color: Q.fat.color },
+          ]}
+          steps={
+            <>
+              FRes = {num(force)} − {num(friction)} = <b>{num(force - friction)} N</b>
+              {force - friction < 0 && <span style={{ color: "#fca5a5" }}> (o carro não sai do lugar)</span>}
+              <br />a = {num(fRes)} ÷ {num(mass)} = <b>{num(accel)} m/s²</b>
+            </>
+          }
+          onReset={() => {
+            setMass(800);
+            setForce(4000);
+            setFriction(500);
+          }}
+        />
+
+        <FormulaCard
+          title="Conversão de unidades"
+          formula={<>v (m/s) = v (km/h) ÷ 3,6</>}
+          terms={[
+            { symbol: "km/h", name: "quilômetros por hora", color: "#38bdf8" },
+            { symbol: "m/s", name: "metros por segundo (SI)", color: "#4ade80" },
+          ]}
+          inputs={[{ key: "kmh", symbol: "v", unit: "km/h", value: kmh, onChange: setKmh, min: 0, max: 100000, color: "#38bdf8" }]}
+          steps={
+            <>
+              {num(kmh)} ÷ 3,6 = <b>{num(kmh / 3.6)} m/s</b>
+            </>
+          }
+          onReset={() => setKmh(108)}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           Para converter: km/h ÷ 3,6 = m/s. Aqui, quanto maior a força do motor e menor a massa ou o

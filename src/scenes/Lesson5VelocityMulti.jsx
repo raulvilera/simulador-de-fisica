@@ -3,7 +3,8 @@ import { useFrame } from "@react-three/fiber";
 import SceneShell from "./SceneShell.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import FormulaCard, { num } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
 const Q = {
@@ -101,6 +102,44 @@ export default function Lesson5VelocityMulti() {
             ]}
           />
         </div>
+        <FormulaCard
+          title="Velocidade média do percurso"
+          formula={
+            <>
+              <Term q={Q.vm}>v</Term> = ΔS<sub>total</sub> ÷ Δt<sub>total</sub>
+            </>
+          }
+          terms={[
+            { symbol: "v", name: "velocidade média do percurso inteiro", unit: "km/h", color: Q.vm.color },
+            { symbol: "ΔS", name: "ΔS total = d₁ + d₂ (soma das distâncias dos trechos)", unit: "km", color: "#fb923c" },
+            { symbol: "Δt", name: "Δt total = t₁ + t₂, com t = d ÷ v em cada trecho", unit: "h", color: "#a78bfa" },
+            { symbol: "d₁, v₁", name: "distância e velocidade do trecho 1", color: Q.t1.color },
+            { symbol: "d₂, v₂", name: "distância e velocidade do trecho 2", color: Q.t2.color },
+          ]}
+          inputs={[
+            { key: "d1", symbol: "d₁", unit: "km", value: d1, onChange: setD1, min: 0.1, max: 100000, color: Q.t1.color },
+            { key: "v1", symbol: "v₁", unit: "km/h", value: v1, onChange: setV1, min: 0.1, max: 100000, color: Q.t1.color },
+            { key: "d2", symbol: "d₂", unit: "km", value: d2, onChange: setD2, min: 0.1, max: 100000, color: Q.t2.color },
+            { key: "v2", symbol: "v₂", unit: "km/h", value: v2, onChange: setV2, min: 0.1, max: 100000, color: Q.t2.color },
+          ]}
+          steps={
+            <>
+              t₁ = {num(d1)} ÷ {num(v1)} = {num(t1)} h · t₂ = {num(d2)} ÷ {num(v2)} = {num(t2)} h
+              <br />v = ({num(d1)} + {num(d2)}) ÷ ({num(t1)} + {num(t2)}) = <b>{num(vMediaTotal)} km/h</b>
+              <br />
+              <span style={{ color: "#fca5a5" }}>
+                média aritmética ({num(v1)} + {num(v2)}) ÷ 2 = {num(vMediaErrada)} km/h ✗
+              </span>
+            </>
+          }
+          onReset={() => {
+            setD1(60);
+            setV1(20);
+            setD2(40);
+            setV2(40);
+          }}
+        />
+
         <QuantityToggles items={Q_LIST} />
         <p style={{ fontSize: "0.82rem", color: "#a6adc9", marginTop: 14 }}>
           A velocidade média do percurso completo é ΔS<sub>total</sub>/Δt<sub>total</sub>, e{" "}
