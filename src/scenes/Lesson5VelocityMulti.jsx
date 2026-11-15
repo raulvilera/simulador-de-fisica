@@ -6,7 +6,17 @@ import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import {
+  QuantityTag,
+  QuantityToggles,
+  SpanArrow,
+  Concept,
+  Term,
+  LANE_Y,
+  CAR_TAG_Y,
+  QuantityHud,
+  HudTag,
+} from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
@@ -17,6 +27,8 @@ const Q = {
   err: { id: "err", symbol: "média aritmética", name: "(v₁ + v₂) ÷ 2 — NÃO é a velocidade média", color: "#f87171" },
 };
 const Q_LIST = Object.values(Q);
+const DS_COLOR = "#fb923c"; // deslocamento (mesma cor das outras aulas)
+const DT_COLOR = "#a78bfa"; // tempo
 const f1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
 
 export default function Lesson5VelocityMulti() {
@@ -32,6 +44,8 @@ export default function Lesson5VelocityMulti() {
   const t2 = d2 / v2;
   const vMediaTotal = (d1 + d2) / (t1 + t2);
   const vMediaErrada = (v1 + v2) / 2;
+  const splitX = (14 * d1) / (d1 + d2); // fim do trecho 1 na cena
+  const carX = useRef(0); // posição do carro na cena (seta ΔS até agora)
 
   // valores do instante atual
   const [now, setNow] = useState({ tH: 0, x: 0 });
@@ -59,62 +73,63 @@ export default function Lesson5VelocityMulti() {
           resetKey={resetKey}
           t1={t1}
           t2={t2}
-          splitX={(14 * d1) / (d1 + d2)}
+          splitX={splitX}
           onTick={setNow}
+          carX={carX}
         >
+          {/* só a grandeza "do carro" anda com ele, logo acima do teto */}
           {now.tH > 0 && (
             <QuantityTag
               id="agora"
-              position={[0, 1.5, 0]}
+              position={[0, CAR_TAG_Y, 0]}
               color={inLeg1 ? Q.t1.color : Q.t2.color}
               symbol={now.tH >= t1 + t2 ? "chegou" : inLeg1 ? "trecho 1" : "trecho 2"}
               value={`v = ${num(vNow, 1)} km/h`}
               name="velocidade do trecho atual"
             />
           )}
-          {now.tH > 0 && (
-            <>
-              <QuantityTag id="tempo" position={[-1.9, 0.1, 1.6]} color="#a78bfa" symbol="t" value={`= ${num(now.tH)} h`} />
-              <QuantityTag
-                id="desloc"
-                position={[1.9, 0.1, 1.6]}
-                color="#fb923c"
-                symbol="ΔS"
-                value={`= ${num(dNow, 1)} km`}
-                name="distância desde a partida"
-              />
-            </>
-          )}
         </AnimatedCar>
 
+        {/* Cotas acima da pista, uma faixa por grandeza (não se cruzam).
+            Faixa 0: deslocamento desde a partida (cresce com o carro). */}
+        <SpanArrow
+          getFrom={() => 0}
+          getTo={() => carX.current}
+          y={LANE_Y(0)}
+          color={DS_COLOR}
+          width={0.06}
+          label={
+            now.tH > 0
+              ? { id: "desloc", symbol: "ΔS", value: `= ${num(dNow, 1)} km`, name: "distância desde a partida" }
+              : undefined
+          }
+        />
+        {/* faixas 1 e 2: cada trecho na sua faixa, com o que vale nele */}
         <Concept id="t1">
-          <SpanArrow getFrom={() => 0} getTo={() => (14 * d1) / (d1 + d2)} y={2.2} color={Q.t1.color} />
+          <SpanArrow
+            getFrom={() => 0}
+            getTo={() => splitX}
+            y={LANE_Y(1)}
+            color={Q.t1.color}
+            label={{ q: Q.t1, value: `d₁ = ${d1} km · v₁ = ${v1} km/h`, name: `t₁ = d₁ ÷ v₁ = ${f1(t1)} h` }}
+          />
         </Concept>
-        <QuantityTag
-          q={Q.t1}
-          position={[(7 * d1) / (d1 + d2), 2.65, 0]}
-          value={`d₁ = ${d1} km · v₁ = ${v1} km/h`}
-          name={`t₁ = d₁ ÷ v₁ = ${f1(t1)} h`}
-        />
         <Concept id="t2">
-          <SpanArrow getFrom={() => (14 * d1) / (d1 + d2)} getTo={() => 14} y={2.2} color={Q.t2.color} />
+          <SpanArrow
+            getFrom={() => splitX}
+            getTo={() => 14}
+            y={LANE_Y(2)}
+            color={Q.t2.color}
+            label={{ q: Q.t2, value: `d₂ = ${d2} km · v₂ = ${v2} km/h`, name: `t₂ = d₂ ÷ v₂ = ${f1(t2)} h` }}
+          />
         </Concept>
-        <QuantityTag
-          q={Q.t2}
-          position={[(14 * d1) / (d1 + d2) + (7 * d2) / (d1 + d2), 1.6, 0]}
-          value={`d₂ = ${d2} km · v₂ = ${v2} km/h`}
-          name={`t₂ = d₂ ÷ v₂ = ${f1(t2)} h`}
-        />
-        <Concept id="vm">
-          <SpanArrow getFrom={() => 0} getTo={() => 14} y={3.3} color={Q.vm.color} width={0.07} />
-        </Concept>
-        <QuantityTag
-          q={Q.vm}
-          position={[7, 3.75, 0]}
-          value={`= (${d1} + ${d2}) ÷ (${f1(t1)} + ${f1(t2)}) = ${f1(vMediaTotal)} km/h`}
-        />
-        <QuantityTag q={Q.err} position={[7, 4.65, 0]} value={`= ${f1(vMediaErrada)} km/h ✗`} />
       </SceneShell>
+      {/* tempo e velocidades médias não são comprimentos: quadro fixo do topo */}
+      <QuantityHud>
+        {now.tH > 0 && <HudTag id="tempo" color={DT_COLOR} symbol="t" value={`= ${num(now.tH)} h`} name="tempo desde a partida" />}
+        <HudTag q={Q.vm} value={`= (${d1} + ${d2}) ÷ (${f1(t1)} + ${f1(t2)}) = ${f1(vMediaTotal)} km/h`} />
+        <HudTag q={Q.err} value={`= ${f1(vMediaErrada)} km/h ✗`} />
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 5 · Velocidade em trechos</p>
@@ -133,6 +148,7 @@ export default function Lesson5VelocityMulti() {
               onClick={() => {
                 setPlaying(false);
                 setNow({ tH: 0, x: 0 });
+                carX.current = 0;
                 setResetKey((k) => k + 1);
               }}
             >
@@ -161,9 +177,9 @@ export default function Lesson5VelocityMulti() {
               symbol: "ΔS",
               name: "ΔS total = d₁ + d₂ (soma das distâncias dos trechos)",
               unit: "km",
-              color: "#fb923c",
+              color: DS_COLOR,
             },
-            { symbol: "Δt", name: "Δt total = t₁ + t₂, com t = d ÷ v em cada trecho", unit: "h", color: "#a78bfa" },
+            { symbol: "Δt", name: "Δt total = t₁ + t₂, com t = d ÷ v em cada trecho", unit: "h", color: DT_COLOR },
             { symbol: "d₁, v₁", name: "distância e velocidade do trecho 1", color: Q.t1.color },
             { symbol: "d₂, v₂", name: "distância e velocidade do trecho 2", color: Q.t2.color },
           ]}
@@ -249,7 +265,7 @@ export default function Lesson5VelocityMulti() {
   );
 }
 
-function AnimatedCar({ objRef, playing, resetKey, t1, t2, splitX, onTick, children }) {
+function AnimatedCar({ objRef, playing, resetKey, t1, t2, splitX, onTick, carX, children }) {
   const ref = useRef();
   const clock = useRef(0);
   const tick = useThrottled(onTick, 100);
@@ -271,6 +287,7 @@ function AnimatedCar({ objRef, playing, resetKey, t1, t2, splitX, onTick, childr
       x = 14;
     }
     if (ref.current) ref.current.position.x = x;
+    if (carX) carX.current = x;
     // tempo do problema (h) desde a partida
     const end = clock.current >= (t1 + t2) * SCALE;
     if (end) sent.current = true;

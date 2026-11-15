@@ -14,6 +14,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 
 export const labelRegistry = new Set(); // elementos .qtag
 export const protectedRegistry = new Set(); // refs de Object3D
+// etiquetas fixas (ex.: no meio de uma cota): nunca se movem, mas as outras
+// etiquetas desviam delas
+export const anchoredRegistry = new Set(); // elementos .qtag
 
 const box = new THREE.Box3();
 const part = new THREE.Box3();
@@ -105,6 +108,14 @@ export default function LabelLayout() {
       const rect = screenRect(o, camera, canvasRect);
       if (rect) blocked.push(rect);
     }
+    for (const el of anchoredRegistry) {
+      if (!el.isConnected) {
+        anchoredRegistry.delete(el);
+        continue;
+      }
+      const r = el.getBoundingClientRect();
+      if (r.width) blocked.push({ x: r.left - 2, y: r.top - 2, w: r.width + 4, h: r.height + 4 });
+    }
 
     // posição "natural" de cada etiqueta (sem o deslocamento atual)
     const items = [];
@@ -182,9 +193,25 @@ export default function LabelLayout() {
         if (placed.some((p) => overlaps(p, rect)) || blocked.some((p) => overlaps(p, rect))) return null;
         return rect;
       };
+      // se o ponto natural sai da tela (ex.: ponta de uma seta comprida), a
+      // busca parte do lugar mais próximo DENTRO da tela
+      const bx =
+        it.x < canvasRect.left
+          ? canvasRect.left - it.x + GAP
+          : it.x + it.w > canvasRect.right
+            ? canvasRect.right - it.x - it.w - GAP
+            : 0;
+      const by =
+        it.y < canvasRect.top
+          ? canvasRect.top - it.y + GAP
+          : it.y + it.h > canvasRect.bottom
+            ? canvasRect.bottom - it.y - it.h - GAP
+            : 0;
       // o lugar livre MAIS PRÓXIMO do ponto que a etiqueta descreve
       let best = null;
-      for (const [cx, cy] of candidates(it.w, it.h)) {
+      for (const [ox, oy] of candidates(it.w, it.h)) {
+        const cx = ox + bx;
+        const cy = oy + by;
         const rect = free(cx, cy);
         if (rect) {
           best = [cx, cy, rect];
@@ -197,7 +224,7 @@ export default function LabelLayout() {
         const far = Math.hypot(it.dx, it.dy) - Math.hypot(best[0], best[1]);
         if (keep && far < it.h * 2.5) best = [it.dx, it.dy, keep];
       }
-      if (!best) best = [0, 0, { x: it.x, y: it.y, w: it.w, h: it.h }];
+      if (!best) best = [bx, by, { x: it.x + bx, y: it.y + by, w: it.w, h: it.h }];
       const [dx, dy, rect] = best;
       placed.push(rect);
       it.el.dataset.laid = "1";

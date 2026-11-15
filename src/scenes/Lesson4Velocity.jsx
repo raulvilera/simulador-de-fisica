@@ -6,7 +6,17 @@ import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import {
+  QuantityTag,
+  QuantityToggles,
+  SpanArrow,
+  Concept,
+  Term,
+  LANE_Y,
+  CAR_TAG_Y,
+  QuantityHud,
+  HudTag,
+} from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
@@ -56,35 +66,46 @@ export default function Lesson4Velocity() {
           onSpeedUpdate={setTrip}
           carX={carX}
         >
-          <QuantityTag q={Q.vi} position={[0, 1.45, 0]} value={`= ${num(instSpeed, 1)} km/h`} />
-          {trip.p > 0 && (
-            <QuantityTag
-              id="agora"
-              position={[0, 2.35, 0]}
-              color="#e5e9f5"
-              symbol="agora"
-              value={`t = ${num(dtNow)} h · ΔS = ${num(dsNow, 1)} km`}
-              name="tempo e deslocamento desde a partida"
-            />
-          )}
+          {/* só a grandeza "do carro" anda com ele, logo acima do teto */}
+          <QuantityTag q={Q.vi} position={[0, CAR_TAG_Y, 0]} value={`= ${num(instSpeed, 1)} km/h`} />
         </AnimatedCar>
-        {/* seta do deslocamento até o instante atual (cresce com o carro) */}
-        <Concept id="ds">
-          <SpanArrow getFrom={() => 0} getTo={() => carX.current} y={1.85} color={Q.ds.color} width={0.06} />
-        </Concept>
 
+        {/* Cotas acima da pista, cada uma na sua faixa (não se cruzam). As linhas
+            tracejadas descem até a régua: dá para ler de onde a onde vai o ΔS. */}
         <Concept id="ds">
-          <SpanArrow getFrom={() => 0} getTo={() => 13} y={2.3} color={Q.ds.color} />
+          {/* faixa 0: deslocamento até o instante atual (cresce com o carro) */}
+          <SpanArrow
+            getFrom={() => 0}
+            getTo={() => carX.current}
+            y={LANE_Y(0)}
+            color={Q.ds.color}
+            width={0.06}
+            label={
+              trip.p > 0 && trip.p < 1
+                ? { id: "ds", symbol: "ΔS", value: `= ${num(dsNow, 1)} km`, name: "deslocamento até agora" }
+                : undefined
+            }
+          />
+          {/* faixa 1: deslocamento da viagem inteira */}
+          <SpanArrow
+            getFrom={() => 0}
+            getTo={() => 13}
+            y={LANE_Y(1)}
+            color={Q.ds.color}
+            label={{ q: Q.ds, value: `= ${num(distance)} km`, name: "deslocamento da viagem inteira" }}
+          />
         </Concept>
-        <QuantityTag
-          q={Q.ds}
-          position={[4, 2.7, 0]}
-          value={`= ${num(distance)} km`}
-          name="deslocamento da viagem inteira"
-        />
-        <QuantityTag q={Q.dt} position={[9.5, 2.7, 0]} value={`= ${fmt(time)} h`} name="do início ao fim da viagem" />
-        <QuantityTag q={Q.vm} position={[6.5, 3.6, 0]} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
       </SceneShell>
+      {/* tempo e velocidade média não são comprimentos (não têm lugar na pista):
+          ficam no quadro fixo do topo, sempre visíveis */}
+      <QuantityHud>
+        <HudTag
+          q={Q.dt}
+          value={trip.p > 0 ? `t = ${num(dtNow)} h de ${fmt(time)} h` : `= ${fmt(time)} h`}
+          name="do início ao fim da viagem"
+        />
+        <HudTag q={Q.vm} value={`= ${distance} ÷ ${fmt(time)} = ${fmt(vMedia)} km/h`} />
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 4 · Velocidade</p>

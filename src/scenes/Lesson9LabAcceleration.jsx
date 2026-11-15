@@ -5,7 +5,7 @@ import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Term } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Term, SpanArrow, QuantityHud, HudTag } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
@@ -46,6 +46,8 @@ export default function Lesson9LabAcceleration() {
   const [run, setRun] = useState(null); // medição em andamento: { t, d, v, boost }
   const v1 = readings.length >= 1 ? v1c : null;
   const v2 = readings.length >= 2 ? v2c : null;
+  // largada do carrinho na cena (com velocidade negativa ele sai do fim da pista)
+  const runStartX = (boost === 2 ? v2c : v1c) < 0 ? SCENE_LENGTH : 0;
   const deltaV = v1 != null && v2 != null ? v2 - v1 : null;
   const accel = deltaV != null ? deltaV / dt : null;
 
@@ -64,47 +66,43 @@ export default function Lesson9LabAcceleration() {
           resetKey={resetKey}
           onFinish={onFinish}
         >
-          {/* valores da medição em andamento (o grupo do carrinho tem escala 0,7) */}
+          {/* só a grandeza "do carrinho" anda com ele (o grupo tem escala 0,7) */}
           {run && (
-            <>
-              <QuantityTag id="tempo" position={[0, 2.6, 0]} color="#a78bfa" symbol="t" value={`= ${num(run.t)} s`} />
-              <QuantityTag
-                id="desloc"
-                position={[0, 1.85, 0]}
-                color="#fb923c"
-                symbol="d"
-                value={`= ${num(run.d, 1)} cm`}
-                name="distância desde a largada"
-              />
-              <QuantityTag
-                id="vagora"
-                position={[0, 1.1, 1.3]}
-                color={run.boost === 2 ? Q.v2.color : Q.v1.color}
-                symbol={`V${run.boost}`}
-                value={`= ${num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s`}
-                name="d ÷ t até agora"
-              />
-            </>
+            <QuantityTag
+              id="vagora"
+              position={[0, 1.45, 0]}
+              color={run.boost === 2 ? Q.v2.color : Q.v1.color}
+              symbol={`V${run.boost}`}
+              value={`= ${num(run.t > 0 ? run.d / run.t : 0, 1)} cm/s`}
+              name="d ÷ t até agora"
+            />
           )}
         </FrictionCart>
-        <QuantityTag
-          q={Q.v1}
-          position={[1.6, 1.7, 0]}
-          value={v1 != null ? `= ${c(v1)} cm/s` : "= ? (faça a medição 1)"}
-        />
-        <QuantityTag
-          q={Q.v2}
-          position={[6.4, 1.7, 0]}
-          value={v2 != null ? `= ${c(v2)} cm/s` : "= ? (faça a medição 2)"}
-        />
-        <QuantityTag q={Q.dt} position={[4, 1.7, 0]} value={`= ${c(dt)} s`} />
-        {deltaV != null && (
-          <>
-            <QuantityTag q={Q.dv} position={[2.6, 2.7, 0]} value={`= ${c(v2)} − ${c(v1)} = ${c(deltaV)} cm/s`} />
-            <QuantityTag q={Q.a} position={[5.6, 2.7, 0]} value={`= ${c(deltaV)} ÷ ${c(dt)} = ${c(accel, 2)} cm/s²`} />
-          </>
+        {/* cota acima da pista: distância desde a largada (cresce com o carrinho) */}
+        {run && (
+          <SpanArrow
+            getFrom={() => runStartX}
+            getTo={() => followRef.current?.position.x ?? runStartX}
+            y={1.6}
+            color="#fb923c"
+            width={0.05}
+            label={{ id: "desloc", symbol: "d", value: `= ${num(run.d, 1)} cm`, name: "distância desde a largada" }}
+          />
         )}
       </SceneShell>
+      {/* resultados das medições não têm lugar na pista: quadro fixo do topo */}
+      <QuantityHud>
+        {run && <HudTag id="tempo" color="#a78bfa" symbol="t" value={`= ${num(run.t)} s`} name="tempo da medição" />}
+        <HudTag q={Q.v1} value={v1 != null ? `= ${c(v1)} cm/s` : "= ? (faça a medição 1)"} />
+        <HudTag q={Q.v2} value={v2 != null ? `= ${c(v2)} cm/s` : "= ? (faça a medição 2)"} />
+        <HudTag q={Q.dt} value={`= ${c(dt)} s`} />
+        {deltaV != null && (
+          <>
+            <HudTag q={Q.dv} value={`= ${c(v2)} − ${c(v1)} = ${c(deltaV)} cm/s`} />
+            <HudTag q={Q.a} value={`= ${c(deltaV)} ÷ ${c(dt)} = ${c(accel, 2)} cm/s²`} />
+          </>
+        )}
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 9 · Desafio experimental</p>

@@ -6,7 +6,16 @@ import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, SpanArrow, Concept, Term } from "./quantities.jsx";
+import {
+  QuantityTag,
+  QuantityToggles,
+  SpanArrow,
+  Concept,
+  Term,
+  CAR_TAG_Y,
+  QuantityHud,
+  HudTag,
+} from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
@@ -20,6 +29,8 @@ const c2 = (v) => v.toFixed(2).replace(".", ",");
 
 const TRACK_LENGTH_CM = 24; // comprimento fixo da "pista", como no roteiro da aula
 const SCENE_LENGTH = 8; // unidades de cena equivalentes aos 24 cm
+// faixas das cotas: mais baixas que na pista de corrida (o carrinho é menor)
+const LAB_LANE_Y = (i) => 1.5 + i * 0.6;
 
 export default function Lesson8LabVelocity() {
   const followRef = useRef(); // objeto que a câmera acompanha
@@ -78,51 +89,56 @@ export default function Lesson8LabVelocity() {
             setProg(o.p);
           }}
         >
-          <QuantityTag
-            q={Q.dt}
-            position={[0, 1.9, 0]}
-            value={`= ${c2(elapsed)} s`}
-            name="tempo no cronômetro"
-          />
+          {/* só a grandeza "do carrinho" anda com ele */}
           {prog > 0 && (
-            <>
-              <QuantityTag
-                id="desloc"
-                position={[0, 1.35, 0]}
-                color="#fb923c"
-                symbol="ΔS"
-                value={`= ${num(prog * dsCalc, 1)} cm`}
-                name="distância desde a largada"
-              />
-              <QuantityTag
-                id="vagora"
-                position={[0, 0.8, 0.9]}
-                color="#4ade80"
-                symbol="V"
-                value={`= ${num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s`}
-                name="ΔS ÷ Δt até agora"
-              />
-            </>
+            <QuantityTag
+              id="vagora"
+              position={[0, CAR_TAG_Y, 0]}
+              color={Q.v.color}
+              symbol="v"
+              value={`= ${num(elapsed > 0 ? (prog * dsCalc) / elapsed : 0, 1)} cm/s`}
+              name="ΔS ÷ Δt até agora"
+            />
           )}
         </FrictionCart>
-        <Concept id="ds">
-          <SpanArrow getFrom={() => 0} getTo={() => SCENE_LENGTH} y={1.9} z={-0.6} color={Q.ds.color} />
-        </Concept>
-        <QuantityTag
-          q={Q.ds}
-          position={[SCENE_LENGTH / 2, 2.3, -0.6]}
-          value={`= ${num(dsCalc)} cm`}
-          name="da largada até a chegada"
+
+        {/* Cotas acima da pista, uma faixa por grandeza (não se cruzam).
+            Faixa 0: quanto o carrinho já andou (cresce com ele). */}
+        <SpanArrow
+          getFrom={() => 0}
+          getTo={() => followRef.current?.position.x ?? 0}
+          y={LAB_LANE_Y(0)}
+          color={Q.ds.color}
+          width={0.05}
+          label={
+            prog > 0 && prog < 1
+              ? { id: "desloc", symbol: "ΔS", value: `= ${num(prog * dsCalc, 1)} cm`, name: "distância desde a largada" }
+              : undefined
+          }
         />
+        {/* faixa 1: a pista inteira */}
+        <Concept id="ds">
+          <SpanArrow
+            getFrom={() => 0}
+            getTo={() => SCENE_LENGTH}
+            y={LAB_LANE_Y(1)}
+            color={Q.ds.color}
+            width={0.07}
+            label={{ q: Q.ds, value: `= ${num(dsCalc)} cm`, name: "da largada até a chegada" }}
+          />
+        </Concept>
+      </SceneShell>
+      {/* cronômetro e resultado não são comprimentos: quadro fixo do topo */}
+      <QuantityHud>
+        <HudTag q={Q.dt} value={`= ${c2(elapsed)} s`} name="tempo no cronômetro" />
         {trials.length > 0 && (
-          <QuantityTag
+          <HudTag
             q={Q.v}
-            position={[SCENE_LENGTH + 0.6, 1.2, 0]}
             value={`= ${num(trials[trials.length - 1].ds)} ÷ ${c2(trials[trials.length - 1].dt)} = ${num(trials[trials.length - 1].v, 1)} cm/s`}
             name="última medição"
           />
         )}
-      </SceneShell>
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 8 · Desafio experimental</p>

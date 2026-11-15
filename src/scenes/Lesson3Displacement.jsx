@@ -7,7 +7,18 @@ import { Vehicle, RulerTrack } from "./primitives.jsx";
 import { Readout } from "../components/ui.jsx";
 import { fitTrack } from "./scale.js";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
-import { QuantityTag, Pin, SpanArrow, QuantityToggles, Term, useQuantityVisibility } from "./quantities.jsx";
+import {
+  QuantityTag,
+  Pin,
+  SpanArrow,
+  QuantityToggles,
+  Term,
+  useQuantityVisibility,
+  LANE_Y,
+  CAR_TAG_Y,
+  QuantityHud,
+  HudTag,
+} from "./quantities.jsx";
 
 // Exemplo do material: A (0 m) -> C (10 m) -> volta e para em B (6 m).
 // Os três pontos podem ser digitados no painel com QUALQUER valor (até negativos):
@@ -136,7 +147,6 @@ export default function Lesson3Displacement() {
   ) : (
     "S"
   );
-  const legEnd = stats.leg === 0 ? fit.toScene(stats.position) : SP[1]; // na cena
 
   return (
     <div className="lesson__canvas">
@@ -157,7 +167,7 @@ export default function Lesson3Displacement() {
         >
           {vis.isVisible("s") && (
             <QuantityTag
-              position={[0, 1.35, 0]}
+              position={[0, CAR_TAG_Y, 0]}
               color={Q.s.color}
               symbol={sLabel}
               value={`= ${fmt(stats.position)} m`}
@@ -167,70 +177,86 @@ export default function Lesson3Displacement() {
           )}
         </Walker>
 
-        {/* S₀: origem / posição inicial */}
+        {/* S₀: marca no chão, na beira da régua (sem haste cruzando a cena) */}
         {vis.isVisible("s0") && (
           <>
-            <Pin x={SP[0]} z={-1.25} height={3.1} color={Q.s0.color} />
+            <Pin x={SP[0]} z={1.35} height={0.35} color={Q.s0.color} />
             <QuantityTag
-              position={[SP[0], 3.45, -1.25]}
+              position={[SP[0], 0.12, 2.35]}
               color={Q.s0.color}
               symbol="S₀"
               value={`= ${fmt(PATH[0])} m`}
               name="posição inicial (origem)"
               onHide={() => vis.hide("s0")}
+              anchored
             />
           </>
         )}
 
-        {/* ΔS: seta da posição inicial até a posição atual/final */}
+        {/* Cotas acima da pista, uma faixa por grandeza (não se cruzam).
+            Faixa 0: ΔS, da posição inicial até a posição atual/final. */}
         {vis.isVisible("ds") && (
-          <>
-            <SpanArrow getFrom={() => SP[0]} getTo={() => sim.current.pos} y={1.85} color={Q.ds.color} />
-            {moved && (
-              <QuantityTag
-                position={[(SP[0] + fit.toScene(stats.position)) / 2, 2.2, 0]}
-                color={Q.ds.color}
-                symbol="ΔS"
-                value={`= ${fmt(stats.position)} − ${fmtp(PATH[0])} = ${fmt(stats.displacement)} m`}
-                name={`deslocamento: ${finished ? "Sf" : "S"} − S₀`}
-                onHide={() => vis.hide("ds")}
-              />
-            )}
-          </>
+          <SpanArrow
+            getFrom={() => SP[0]}
+            getTo={() => sim.current.pos}
+            y={LANE_Y(0)}
+            color={Q.ds.color}
+            label={
+              moved
+                ? {
+                    symbol: "ΔS",
+                    value: `= ${fmt(stats.position)} − ${fmtp(PATH[0])} = ${fmt(stats.displacement)} m`,
+                    name: `deslocamento: ${finished ? "Sf" : "S"} − S₀`,
+                    onHide: () => vis.hide("ds"),
+                  }
+                : undefined
+            }
+          />
         )}
 
-        {/* d: distância percorrida, trecho por trecho */}
+        {/* Faixas 1 e 2: distância percorrida, um trecho em cada faixa (na volta
+            a seta do trecho 2 não fica por cima da do trecho 1) */}
         {vis.isVisible("d") && (
           <>
             <SpanArrow
               getFrom={() => SP[0]}
               getTo={() => (sim.current.leg === 0 ? sim.current.pos : SP[1])}
-              y={2.85}
+              y={LANE_Y(1)}
               color={Q.d.color}
               width={0.07}
+              label={
+                moved
+                  ? { symbol: "d₁", value: `= ${fmt(leg1)} m`, name: "trecho 1: de A até C", onHide: () => vis.hide("d") }
+                  : undefined
+              }
             />
             <SpanArrow
               getFrom={() => SP[1]}
               getTo={() => (sim.current.leg >= 1 ? sim.current.pos : SP[1])}
-              y={2.55}
+              y={LANE_Y(2)}
               color={Q.d.color}
               width={0.07}
+              label={
+                leg2 > 0.05
+                  ? { symbol: "d₂", value: `= ${fmt(leg2)} m`, name: "trecho 2: de C até B", onHide: () => vis.hide("d") }
+                  : undefined
+              }
             />
-            {moved && (
-              <QuantityTag
-                position={[Math.max(3.5, legEnd / 2 + 1), 3.4, 0]}
-                color={Q.d.color}
-                symbol="d"
-                value={
-                  leg2 > 0 ? `= ${fmt(leg1)} + ${fmt(leg2)} = ${fmt(stats.distance)} m` : `= ${fmt(stats.distance)} m`
-                }
-                name="distância percorrida (todo o trajeto)"
-                onHide={() => vis.hide("d")}
-              />
-            )}
           </>
         )}
       </SceneShell>
+      {/* a distância total é uma soma de trechos (não é uma seta só): quadro do topo */}
+      {vis.isVisible("d") && moved && (
+        <QuantityHud>
+          <HudTag
+            color={Q.d.color}
+            symbol="d"
+            value={leg2 > 0 ? `= ${fmt(leg1)} + ${fmt(leg2)} = ${fmt(stats.distance)} m` : `= ${fmt(stats.distance)} m`}
+            name="distância percorrida (todo o trajeto)"
+            onHide={() => vis.hide("d")}
+          />
+        </QuantityHud>
+      )}
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 3 · Posição e deslocamento</p>

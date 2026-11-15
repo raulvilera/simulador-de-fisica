@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { labelRegistry } from "./LabelLayout.jsx";
+import { labelRegistry, anchoredRegistry } from "./LabelLayout.jsx";
 import { create } from "zustand";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import "./quantities.css";
 
@@ -55,30 +55,64 @@ export function useQuantityVisibility(ids) {
 // Etiqueta da cena. Fica compacta (símbolo e valor, semitransparente) para não
 // esconder o que acontece na simulação; tocar nela (ou passar o mouse) mostra a
 // explicação, e o × a apaga. Com `id`, o estado de oculta é global.
-export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, value, onHide }) {
-  const key = id ?? q?.id;
+// `anchored`: a etiqueta fica SEMPRE no seu ponto (ex.: no meio de uma cota) —
+// a organização automática não a move nem desenha linha-guia; ela só serve de
+// obstáculo para as outras etiquetas não a cobrirem.
+export function QuantityTag({ position = [0, 0, 0], ...props }) {
+  const key = props.id ?? props.q?.id;
   const visible = useConcepts((s) => !key || !s.hidden.has(key));
+  if (!visible) return null;
+  return (
+    <Html position={position} center zIndexRange={[2, 0]}>
+      <TagBody {...props} />
+    </Html>
+  );
+}
+
+// Etiqueta fora da cena 3D, no quadro fixo do topo (QuantityHud): para
+// grandezas que não ocupam um lugar na pista (tempo, velocidade média...).
+export function HudTag(props) {
+  const key = props.id ?? props.q?.id;
+  const visible = useConcepts((s) => !key || !s.hidden.has(key));
+  if (!visible) return null;
+  return <TagBody {...props} anchored />;
+}
+
+// Quadro fixo no topo da cena com as HudTag (não se mexe com a câmera).
+export function QuantityHud({ children }) {
+  return (
+    <div className="qhud" aria-label="Grandezas da viagem inteira">
+      {children}
+    </div>
+  );
+}
+
+function TagBody({ id, q, color, symbol, name, value, onHide, anchored = false, elRef }) {
+  const key = id ?? q?.id;
   const detail = useConcepts((s) => s.detail);
   const [open, setOpen] = useState(false);
   // registra a etiqueta na organização automática (evita sobreposições)
-  const reg = useCallback((el) => {
-    if (el) labelRegistry.add(el);
-    else
-      for (const e of labelRegistry) {
-        if (!e.isConnected) labelRegistry.delete(e);
-      }
-  }, []);
-  if (!visible) return null;
+  const reg = useCallback(
+    (el) => {
+      const registry = anchored ? anchoredRegistry : labelRegistry;
+      if (elRef) elRef.current = el;
+      if (el) registry.add(el);
+      else
+        for (const e of registry) {
+          if (!e.isConnected) registry.delete(e);
+        }
+    },
+    [anchored, elRef],
+  );
   color = color ?? q?.color;
   symbol = symbol ?? q?.symbol;
   name = name ?? q?.name;
   const hideIt = onHide ?? (key ? () => useConcepts.getState().hide(key) : undefined);
   const expanded = detail || open;
   return (
-    <Html position={position} center zIndexRange={[2, 0]}>
-      <div
+    <div
         ref={reg}
-        className={`qtag${expanded ? " is-open" : ""}`}
+        className={`qtag${expanded ? " is-open" : ""}${anchored ? " qtag--anchored" : ""}`}
         style={{ "--qc": color }}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -111,7 +145,6 @@ export function QuantityTag({ id, q, position = [0, 0, 0], color, symbol, name, 
           ×
         </button>
       </div>
-    </Html>
   );
 }
 
@@ -139,15 +172,83 @@ headShape.lineTo(-HEAD_LEN, HEAD_W / 2);
 headShape.lineTo(-HEAD_LEN, -HEAD_W / 2);
 headShape.closePath();
 
-// Seta de `getFrom()` até `getTo()` (em X), lida a cada quadro para acompanhar o
-// movimento sem redesenhar o React. Por padrão fica em pé (de frente para a
-// câmera); com `flat` fica deitada no chão.
-export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, flat = false }) {
+// Alturas fixas ("faixas") para as cotas acima da pista. Cada grandeza usa uma
+// faixa própria, então as setas nunca se cruzam; as etiquetas que andam com o
+// carro ficam abaixo da faixa 0.
+export const LANE_Y = (i) => 2.05 + i * 0.8;
+export const CAR_TAG_Y = 1.0; // etiqueta logo acima do carro (o carro fica em y = 0,3)
+
+// Onde pôr a etiqueta de uma cota: no meio do pedaço da seta que aparece na
+// tela (quando a câmera mostra só parte de uma seta comprida, a etiqueta não
+// some para fora da tela).
+const pv = new THREE.Vector3();
+function labelX(a, b, y, z, camera, width, labelW = 140) {
+  const margin = labelW / 2 + 8; // px: a etiqueta inteira fica dentro da tela
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  const sx = (x) => {
+    pv.set(x, y, z).project(camera);
+    return ((pv.x + 1) / 2) * width;
+  };
+  const sLo = sx(lo);
+  const sHi = sx(hi);
+  if (!(sHi > sLo)) return (a + b) / 2; // câmera de lado/atrás: fica no meio
+  const left = Math.max(sLo, margin);
+  const right = Math.min(sHi, width - margin);
+  if (left > right) return (a + b) / 2;
+  const target = (left + right) / 2;
+  // a projeção é crescente em x: busca binária do x da cena
+  let x0 = lo;
+  let x1 = hi;
+  for (let i = 0; i < 14; i++) {
+    const m = (x0 + x1) / 2;
+    if (sx(m) < target) x0 = m;
+    else x1 = m;
+  }
+  return (x0 + x1) / 2;
+}
+
+// linha tracejada vertical (linha de chamada da cota)
+function DropLine({ height, color, lineRef }) {
+  const line = useMemo(() => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -height, 0)]);
+    const m = new THREE.LineDashedMaterial({
+      color,
+      dashSize: 0.12,
+      gapSize: 0.09,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const l = new THREE.Line(g, m);
+    l.computeLineDistances();
+    l.renderOrder = 2;
+    return l;
+  }, [height, color]);
+  return <primitive object={line} ref={lineRef} />;
+}
+
+// Cota: seta de `getFrom()` até `getTo()` (em X), lida a cada quadro para
+// acompanhar o movimento sem redesenhar o React. Fica em pé (de frente para a
+// câmera) na altura `y` (use LANE_Y); com `flat` fica deitada no chão.
+// - `drop`: linhas tracejadas descem das pontas até a pista, mostrando de qual
+//   marca da régua a qual marca a grandeza vai.
+// - `label`: props de uma QuantityTag que fica presa NO MEIO da seta (e a
+//   acompanha enquanto ela cresce) — sem linha-guia, sem ser empurrada.
+export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, flat = false, drop = !flat, label }) {
   const shaft = useRef();
   const head = useRef();
   const tick = useRef();
   const root = useRef();
+  const dropA = useRef();
+  const dropB = useRef();
+  const tag = useRef();
+  const tagEl = useRef();
   const headGeo = useMemo(() => new THREE.ShapeGeometry(headShape), []);
+  const dropH = Math.max(0.05, y - 0.05);
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
 
   useFrame(() => {
     const a = getFrom();
@@ -156,6 +257,7 @@ export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, fl
     const len = Math.abs(L);
     if (!root.current) return;
     root.current.visible = len > 0.05;
+    if (tag.current) tag.current.position.x = labelX(a, b, y, z, camera, size.width, tagEl.current?.offsetWidth);
     if (!root.current.visible) return;
     const dir = Math.sign(L);
     const shaftLen = Math.max(0.001, len - Math.min(HEAD_LEN, len));
@@ -164,10 +266,44 @@ export function SpanArrow({ getFrom, getTo, z = 0, y = 2, color, width = 0.1, fl
     head.current.position.x = b;
     head.current.rotation.z = dir > 0 ? 0 : Math.PI;
     tick.current.position.x = a;
+    if (dropA.current) dropA.current.position.x = a;
+    if (dropB.current) dropB.current.position.x = b;
   });
 
   return (
+    <>
+      {label && (
+        <group ref={tag} position={[(getFrom() + getTo()) / 2, y, z]}>
+          <QuantityTag color={color} {...label} anchored elRef={tagEl} />
+        </group>
+      )}
+      <SpanArrowBody
+        root={root}
+        shaft={shaft}
+        head={head}
+        tick={tick}
+        headGeo={headGeo}
+        y={y}
+        z={z}
+        color={color}
+        width={width}
+        flat={flat}
+      >
+        {drop && (
+          <>
+            <DropLine height={dropH} color={color} lineRef={dropA} />
+            <DropLine height={dropH} color={color} lineRef={dropB} />
+          </>
+        )}
+      </SpanArrowBody>
+    </>
+  );
+}
+
+function SpanArrowBody({ root, shaft, head, tick, headGeo, y, z, color, width, flat, children }) {
+  return (
     <group ref={root} position={[0, y, z]} userData={{ noProtect: true }}>
+      {children}
       <mesh ref={shaft} rotation={[flat ? -Math.PI / 2 : 0, 0, 0]} renderOrder={2}>
         <planeGeometry args={[1, width]} />
         <meshBasicMaterial
