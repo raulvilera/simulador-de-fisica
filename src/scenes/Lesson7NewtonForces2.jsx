@@ -6,7 +6,7 @@ import { useThrottled } from "./useThrottled.js";
 import { Vehicle, RulerTrack, Arrow3D } from "./primitives.jsx";
 import { niceStep, fmtNum } from "./scale.js";
 import { Readout, Slider } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Concept, Term, CAR_TAG_Y, QuantityHud, HudTag } from "./quantities.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Conceitos mostrados dentro da cena (tocar na etiqueta oculta)
@@ -80,7 +80,11 @@ export default function Lesson7NewtonForces2() {
             </Concept>
           )}
           {friction > 0 && (
-            <QuantityTag q={Q.fat} position={[-1.15 - aLen(friction) - 0.9, 0.45, 0.75]} value={`= ${friction} N`} />
+            <QuantityTag
+              q={Q.fat}
+              position={[-1.15 - aLen(friction) - 0.9, 0.45, 0.75]}
+              value={`= ${friction} N`}
+            />
           )}
           {fRes !== 0 && (
             <Concept id="fres">
@@ -98,28 +102,25 @@ export default function Lesson7NewtonForces2() {
             position={[-0.2 + Math.sign(fRes || 1) * (aLen(fRes) + 1.1), 1.75, 0]}
             value={stoppedNow ? "= 0 N (parado: o atrito equilibra)" : `= ${num(force)} − ${num(friction)} = ${num(fRes)} N`}
           />
-          <QuantityTag q={Q.a} position={[0, 2.95, 0]} value={stoppedNow ? "= 0 (parado)" : `= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
+          {/* a velocidade é do carro: anda com ele, logo acima do teto */}
           <QuantityTag
             q={Q.v}
-            position={[0, 0, 2.7]}
+            position={[0, CAR_TAG_Y, 0]}
             value={`= ${num(live.v, 1)} m/s (${num(live.v * 3.6, 0)} km/h)`}
             name="velocidade (muda com a aceleração)"
           />
-          {live.t > 0 && (
-            <>
-              <QuantityTag id="tempo" position={[-2.6, 0, 2.7]} color="#a78bfa" symbol="t" value={`= ${num(live.t, 1)} s`} />
-              <QuantityTag
-                id="desloc"
-                position={[2.6, 0, 2.7]}
-                color="#e5e9f5"
-                symbol="x"
-                value={`= ${num(live.x, 1)} m`}
-                name="distância percorrida"
-              />
-            </>
-          )}
         </RaceCar>
       </SceneShell>
+      {/* aceleração, tempo e distância: quadro fixo do topo (sem linhas-guia) */}
+      <QuantityHud>
+        <HudTag q={Q.a} value={stoppedNow ? "= 0 (parado)" : `= ${num(fRes)} ÷ ${num(mass)} = ${num(accel)} m/s²`} />
+        {live.t > 0 && (
+          <>
+            <HudTag id="tempo" color="#a78bfa" symbol="t" value={`= ${num(live.t, 1)} s`} />
+            <HudTag id="desloc" color="#fb923c" symbol="x" value={`= ${num(live.x, 1)} m`} name="distância percorrida" />
+          </>
+        )}
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 7 · Aceleração e força</p>

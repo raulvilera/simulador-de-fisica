@@ -51,6 +51,13 @@
   display: block;
 }
 
+/* etiqueta presa no meio de uma cota: tampa a seta atrás dela, como o número
+   de uma cota num desenho técnico */
+.qtag--anchored {
+  background: rgba(8, 11, 22, 0.86);
+  border-width: 2px;
+}
+
 .qtag:hover,
 .qtag.is-open {
   background: rgba(8, 11, 22, 0.9);
@@ -228,5 +235,33 @@
   }
   .qtag__main {
     padding: 1px 3px 1px 5px;
+  }
+}
+
+/* Quadro fixo no topo da cena: grandezas que não têm um lugar na pista
+   (tempo, velocidade média). Não se mexe com a câmera e não tem linha-guia. */
+.qhud {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 0;
+  right: var(--panel-w, 0px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 170px;
+  pointer-events: none;
+}
+
+.qhud .qtag {
+  pointer-events: auto;
+  background: rgba(8, 11, 22, 0.8);
+}
+
+@media (max-width: 820px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+  .qhud {
+    top: calc(66px + env(safe-area-inset-top));
+    padding: 0 10px;
   }
 }

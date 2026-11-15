@@ -5,7 +5,7 @@ import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Concept, Term } from "./quantities.jsx";
+import { QuantityTag, QuantityToggles, Concept, Term, SpanArrow, QuantityHud, HudTag } from "./quantities.jsx";
 import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
@@ -123,26 +123,24 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
         />
       </group>
-      {/* tempo e distância entre os carros, mudando durante o movimento */}
+      {/* distância entre os carros: cota no chão, de um carro ao outro, com o
+          valor no meio (o tempo fica no quadro fixo do topo) */}
       {clockT > 0 && (
-        <>
-          <QuantityTag
-            id="tempo"
-            position={[OBS[0] + 1.6, 0.25, OBS[2]]}
-            color="#a78bfa"
-            symbol="t"
-            value={`= ${num(clockT, 1)} s`}
-            name="tempo de movimento"
-          />
-          <QuantityTag
-            id="entre"
-            position={[(xJ + xO) / 2, 0.15, 2.3]}
-            color="#e5e9f5"
-            symbol="distância"
-            value={`= ${num(Math.abs(xO - xJ), 1)} m`}
-            name={`entre os carros: muda ${num(Math.abs(V_OUTRO - V_JOAO))} m a cada segundo (v rel)`}
-          />
-        </>
+        <SpanArrow
+          flat
+          getFrom={() => x.current.joao}
+          getTo={() => x.current.outro}
+          y={0.03}
+          z={1.75}
+          color="#e5e9f5"
+          width={0.07}
+          label={{
+            id: "entre",
+            symbol: "distância",
+            value: `= ${num(Math.abs(xO - xJ), 1)} m`,
+            name: `entre os carros: muda ${num(Math.abs(V_OUTRO - V_JOAO))} m a cada segundo (v rel)`,
+          }}
+        />
       )}
       {/* observador: uma pessoa parada na beira da pista */}
       <group ref={obsRef}>
@@ -239,6 +237,12 @@ export default function Lesson2ReferenceFrame() {
           xO={xOnow}
         />
       </SceneShell>
+      {/* o tempo não tem lugar na pista: quadro fixo do topo */}
+      {clock.t > 0 && (
+        <QuantityHud>
+          <HudTag id="tempo" color="#a78bfa" symbol="t" value={`= ${num(clock.t, 1)} s`} name="tempo de movimento" />
+        </QuantityHud>
+      )}
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 2 · Referencial</p>
