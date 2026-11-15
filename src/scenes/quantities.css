@@ -259,9 +259,22 @@
   background: rgba(8, 11, 22, 0.8);
 }
 
-@media (max-width: 820px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+/* celular em pé: abaixo dos botões "Aulas" e "Aula N" */
+@media (max-width: 820px) and (orientation: portrait) {
   .qhud {
     top: calc(66px + env(safe-area-inset-top));
     padding: 0 10px;
+    gap: 4px;
+  }
+}
+
+/* celular deitado: na mesma linha do botão "Todas as aulas", à direita dele
+   (assim não cobre a caneta nem a pista) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .qhud {
+    top: calc(10px + env(safe-area-inset-top));
+    padding: 0 10px 0 calc(164px + env(safe-area-inset-left));
+    justify-content: flex-start;
+    gap: 4px;
   }
 }

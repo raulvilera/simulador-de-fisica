@@ -5,7 +5,7 @@ import KeepInView from "./KeepInView.jsx";
 import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout } from "../components/ui.jsx";
-import { QuantityTag, QuantityToggles, Concept, Term, SpanArrow, QuantityHud, HudTag } from "./quantities.jsx";
+import { QuantityToggles, Concept, Term, SpanArrow, QuantityHud, HudTag } from "./quantities.jsx";
 import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
@@ -36,7 +36,7 @@ const Q_LIST = Object.values(Q);
 // termina (nada de "teletransporte" de uma ponta à outra).
 const ROAD_END = 20; // mais curto: a câmera não precisa se afastar tanto e os carros não ficam minúsculos
 
-function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey, clockT = 0, xJ = 0, xO = -4 }) {
+function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey, clockT = 0, setAngJ, setAngO }) {
   const joaoRef = useRef();
   const outroRef = useRef();
   const x = useRef({ joao: 0, outro: -4 });
@@ -52,8 +52,6 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
   }, [resetKey]);
   const clock = useRef(0); // tempo de movimento (s)
   const tick = useThrottled(onTick, 100);
-  const [angJ, setAngJ] = useState(null);
-  const [angO, setAngO] = useState(null);
   // olho de quem observa: a pessoa (solo) ou o João dentro do carro
   const eye = () => (frame === "solo" ? [OBS[0], EYE_Y, OBS[2]] : [x.current.joao, 0.5, LANE_J]);
   const origin = () => (frame === "solo" ? OBS : [x.current.joao, 0, LANE_J]);
@@ -97,34 +95,15 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#93c5fd">
           João
         </Label3D>
-        <QuantityTag
-          q={Q.vj}
-          position={[0, 2.05, 0]}
-          value={frame === "solo" ? `= ${f1(V_JOAO)} m/s · x = ${num(xJ, 1)} m` : "= 0 m/s · x = 0 m"}
-          name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
-        />
-        {frame === "joao" && (
-          <QuantityTag q={Q.ref} position={[0, 3.45, 0]} value="carro do João" name="o observador viaja com João" />
-        )}
       </group>
       <group ref={outroRef} position={[-4, 0.3, 0.62]}>
         <Vehicle color="#f87171" rotationY={V_OUTRO < 0 ? Math.PI : 0} />
         <Label3D position={[0, 1.3, 0]} fontSize={0.26} color="#fca5a5">
           outro carro
         </Label3D>
-        <QuantityTag
-          q={Q.vo}
-          position={[0, 2.95, 0]}
-          value={
-            frame === "solo"
-              ? `= ${f1(V_OUTRO)} m/s · x = ${num(xO, 1)} m`
-              : `= ${f1(V_OUTRO - V_JOAO)} m/s · x = ${num(xO - xJ, 1)} m`
-          }
-          name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
-        />
       </group>
-      {/* distância entre os carros: cota no chão, de um carro ao outro, com o
-          valor no meio (o tempo fica no quadro fixo do topo) */}
+      {/* distância entre os carros: cota branca no chão, de um carro ao outro
+          (o valor fica no quadro do topo, para não cobrir os carros) */}
       {clockT > 0 && (
         <SpanArrow
           flat
@@ -134,12 +113,6 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           z={1.75}
           color="#e5e9f5"
           width={0.07}
-          label={{
-            id: "entre",
-            symbol: "distância",
-            value: `= ${num(Math.abs(xO - xJ), 1)} m`,
-            name: `entre os carros: muda ${num(Math.abs(V_OUTRO - V_JOAO))} m a cada segundo (v rel)`,
-          }}
         />
       )}
       {/* observador: uma pessoa parada na beira da pista */}
@@ -148,13 +121,10 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
       </group>
       {/* no referencial da rua, a câmera acompanha os dois carros (e o observador) */}
       <KeepInView targets={[joaoRef, outroRef, obsRef]} enabled={frame === "solo"} axes={[1, 1, 0]} />
-      <QuantityTag
-        q={Q.ref}
-        position={[OBS[0], PERSON_H + 0.75, OBS[2]]}
-        symbol={frame === "solo" ? "Observador (referencial)" : "Observador na rua"}
-        value={frame === "solo" ? "x = 0" : undefined}
-        name={frame === "solo" ? "pessoa parada: origem das posições" : "agora o referencial é o João"}
-      />
+      {/* nome do observador em texto 3D (fica do tamanho da cena: não cobre nada) */}
+      <Label3D position={[OBS[0], PERSON_H + 0.35, OBS[2]]} fontSize={0.24} color={Q.ref.color}>
+        {frame === "solo" ? "observador (x = 0)" : "observador"}
+      </Label3D>
 
       {/* eixo de referência (sentido +x do movimento) e ângulos de visão */}
       <Concept id="ang">
@@ -177,31 +147,6 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
           onAngle={setAngO}
         />
       </Concept>
-      {frame === "solo" && angJ && (
-        <QuantityTag
-          id="ang"
-          position={angJ.mid}
-          color="#60a5fa"
-          symbol="θ João"
-          value={`= ${Math.round(angJ.deg)}°`}
-          name={`x = ${sgn(angJ.dx)} m do observador`}
-        />
-      )}
-      {angO && (
-        <QuantityTag
-          id="ang"
-          position={
-            frame === "solo"
-              ? [angO.mid[0], 0.75, angO.mid[2]]
-              : [x.current.joao + 2.4, 0.4, (LANE_J + LANE_O) / 2 + 1.4]
-          }
-          color="#f87171"
-          symbol="θ outro"
-          value={`= ${Math.round(angO.deg)}°`}
-          name={`x = ${sgn(angO.dx)} m ${frame === "solo" ? "do observador" : "do João"}`}
-        />
-      )}
-      <QuantityTag q={Q.traj} position={[-7, 0.45, 1.6]} value="reta" name="caminho seguido pelos carros" />
     </>
   );
 }
@@ -214,6 +159,8 @@ export default function Lesson2ReferenceFrame() {
   const [V_JOAO, setVJ] = useState(EX_JOAO);
   const [V_OUTRO, setVO] = useState(EX_OUTRO);
   const [clock, setClock] = useState({ t: 0 }); // tempo desde que os carros começaram a andar
+  const [angJ, setAngJ] = useState(null); // ângulo de visão até o João
+  const [angO, setAngO] = useState(null); // ângulo de visão até o outro carro
   const relativeSpeed = frame === "solo" ? f1(V_OUTRO) : f1(V_OUTRO - V_JOAO);
 
   // posições do instante atual (em relação ao observador, x = 0); param no fim da pista
@@ -233,16 +180,66 @@ export default function Lesson2ReferenceFrame() {
           onTick={setClock}
           onEnd={() => setPlaying(false)}
           clockT={clock.t}
-          xJ={xJnow}
-          xO={xOnow}
+          setAngJ={setAngJ}
+          setAngO={setAngO}
         />
       </SceneShell>
-      {/* o tempo não tem lugar na pista: quadro fixo do topo */}
-      {clock.t > 0 && (
-        <QuantityHud>
-          <HudTag id="tempo" color="#a78bfa" symbol="t" value={`= ${num(clock.t, 1)} s`} name="tempo de movimento" />
-        </QuantityHud>
-      )}
+      {/* Valores no quadro fixo do topo: na cena ficam só os carros, as setas e
+          os ângulos (com a câmera afastada, etiquetas na cena cobriam tudo).
+          As cores são as mesmas das linhas e dos carros. */}
+      <QuantityHud>
+        <HudTag
+          q={Q.ref}
+          symbol="Referencial"
+          value={frame === "solo" ? "observador na rua (x = 0)" : "carro do João"}
+          name={frame === "solo" ? "pessoa parada: origem das posições" : "o observador viaja com João"}
+        />
+        <HudTag
+          q={Q.vj}
+          value={frame === "solo" ? `= ${f1(V_JOAO)} m/s · x = ${num(xJnow, 1)} m` : "= 0 m/s · x = 0 m"}
+          name={frame === "solo" ? "em relação à rua" : "em relação a ele mesmo: parado"}
+        />
+        <HudTag
+          q={Q.vo}
+          value={
+            frame === "solo"
+              ? `= ${f1(V_OUTRO)} m/s · x = ${num(xOnow, 1)} m`
+              : `= ${f1(V_OUTRO - V_JOAO)} m/s · x = ${num(xOnow - xJnow, 1)} m`
+          }
+          name={frame === "solo" ? "em relação à rua" : `vista por João (${f1(V_OUTRO)} − ${f1(V_JOAO)})`}
+        />
+        {clock.t > 0 && (
+          <>
+            <HudTag id="tempo" color="#a78bfa" symbol="t" value={`= ${num(clock.t, 1)} s`} name="tempo de movimento" />
+            <HudTag
+              id="entre"
+              color="#e5e9f5"
+              symbol="distância"
+              value={`= ${num(Math.abs(xOnow - xJnow), 1)} m`}
+              name={`entre os carros: muda ${num(Math.abs(V_OUTRO - V_JOAO))} m a cada segundo (v rel)`}
+            />
+          </>
+        )}
+        {frame === "solo" && angJ && (
+          <HudTag
+            id="ang"
+            color="#60a5fa"
+            symbol="θ João"
+            value={`= ${Math.round(angJ.deg)}°`}
+            name={`x = ${sgn(angJ.dx)} m do observador`}
+          />
+        )}
+        {angO && (
+          <HudTag
+            id="ang"
+            color="#f87171"
+            symbol="θ outro"
+            value={`= ${Math.round(angO.deg)}°`}
+            name={`x = ${sgn(angO.dx)} m ${frame === "solo" ? "do observador" : "do João"}`}
+          />
+        )}
+        <HudTag q={Q.traj} value="reta" name="caminho seguido pelos carros" />
+      </QuantityHud>
 
       <div className="panel">
         <p className="panel__eyebrow">Aula 2 · Referencial</p>
