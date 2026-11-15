@@ -193,14 +193,18 @@ function labelX(a, b, y, z, camera, width, labelW = 140) {
   const sLo = sx(lo);
   const sHi = sx(hi);
   if (!(sHi > sLo)) return (a + b) / 2; // câmera de lado/atrás: fica no meio
-  const left = Math.max(sLo, margin);
-  const right = Math.min(sHi, width - margin);
-  if (left > right) return (a + b) / 2;
-  const target = (left + right) / 2;
-  // a projeção é crescente em x: busca binária do x da cena
-  let x0 = lo;
-  let x1 = hi;
-  for (let i = 0; i < 14; i++) {
+  // meio do pedaço visível da seta, mas com a etiqueta inteira dentro da tela
+  // (se aparece só uma pontinha da seta, a etiqueta encosta na borda)
+  const visL = Math.max(sLo, 0);
+  const visR = Math.min(sHi, width);
+  const mid = visL <= visR ? (visL + visR) / 2 : sHi < 0 ? 0 : width;
+  const target = Math.min(Math.max(mid, margin), width - margin);
+  // a projeção é crescente em x: busca binária do x da cena (com folga além
+  // das pontas, para a etiqueta poder passar um pouco da ponta da seta)
+  const pad = hi - lo + 20;
+  let x0 = lo - pad;
+  let x1 = hi + pad;
+  for (let i = 0; i < 20; i++) {
     const m = (x0 + x1) / 2;
     if (sx(m) < target) x0 = m;
     else x1 = m;
