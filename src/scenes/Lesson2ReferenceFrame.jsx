@@ -6,7 +6,7 @@ import { Vehicle, RulerTrack, Label3D } from "./primitives.jsx";
 import { useThrottled } from "./useThrottled.js";
 import { Readout } from "../components/ui.jsx";
 import { QuantityToggles, Concept, Term, SpanArrow, QuantityHud, HudTag } from "./quantities.jsx";
-import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y, PERSON_H } from "./observer.jsx";
+import { StandingPerson, SightAngle, ReferenceAxis, EYE_Y } from "./observer.jsx";
 import FormulaCard, { num, nump } from "../components/FormulaCard.jsx";
 
 // Valores do exemplo (podem ser digitados no painel), em m/s no referencial do solo
@@ -121,8 +121,14 @@ function Road({ playing, frame, vJ: V_JOAO, vO: V_OUTRO, onTick, onEnd, resetKey
       </group>
       {/* no referencial da rua, a câmera acompanha os dois carros (e o observador) */}
       <KeepInView targets={[joaoRef, outroRef, obsRef]} enabled={frame === "solo"} axes={[1, 1, 0]} />
-      {/* nome do observador em texto 3D (fica do tamanho da cena: não cobre nada) */}
-      <Label3D position={[OBS[0], PERSON_H + 0.35, OBS[2]]} fontSize={0.24} color={Q.ref.color}>
+      {/* nome do observador pintado no chão, aos pés dele (acima da cabeça ele
+          ficava por cima do carro do João, que passa logo atrás) */}
+      <Label3D
+        position={[OBS[0], 0.03, OBS[2] + 0.75]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.3}
+        color={Q.ref.color}
+      >
         {frame === "solo" ? "observador (x = 0)" : "observador"}
       </Label3D>
 

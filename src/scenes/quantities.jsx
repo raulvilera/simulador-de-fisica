@@ -75,7 +75,8 @@ export function HudTag(props) {
   const key = props.id ?? props.q?.id;
   const visible = useConcepts((s) => !key || !s.hidden.has(key));
   if (!visible) return null;
-  return <TagBody {...props} anchored />;
+  // sempre compacta (o nome aparece ao tocar): o quadro não cresce para cima da cena
+  return <TagBody {...props} anchored compact />;
 }
 
 // Quadro fixo no topo da cena com as HudTag (não se mexe com a câmera).
@@ -87,7 +88,7 @@ export function QuantityHud({ children }) {
   );
 }
 
-function TagBody({ id, q, color, symbol, name, value, onHide, anchored = false, elRef }) {
+function TagBody({ id, q, color, symbol, name, value, onHide, anchored = false, elRef, compact = false }) {
   const key = id ?? q?.id;
   const detail = useConcepts((s) => s.detail);
   const [open, setOpen] = useState(false);
@@ -108,7 +109,7 @@ function TagBody({ id, q, color, symbol, name, value, onHide, anchored = false, 
   symbol = symbol ?? q?.symbol;
   name = name ?? q?.name;
   const hideIt = onHide ?? (key ? () => useConcepts.getState().hide(key) : undefined);
-  const expanded = detail || open;
+  const expanded = (detail && !compact) || open;
   return (
     <div
         ref={reg}
